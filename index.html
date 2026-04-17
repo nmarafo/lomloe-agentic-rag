@@ -358,6 +358,9 @@ let embeddingPipeline = null;
 let llmProcessor = null;
 let llmModel = null;
 
+// Enviar status inicial nada más arrancar el script para confirmar vida
+self.postMessage({ action: 'status', payload: { text: 'AI Engine despertando...' } });
+
 self.onerror = (e) => {
     self.postMessage({ action: 'error', payload: { message: "AI Worker Error: " + e.message } });
 };
@@ -371,10 +374,13 @@ self.onmessage = async (e) => {
             
             if (!Transformers) Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
             const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = Transformers;
+            
+            // CONFIGURACIÓN DE SEGURIDAD PARA SANDBOX
             env.allowLocalModels = false;
-            env.useBrowserCache = true;
+            env.useBrowserCache = false; // Desactivar caché para evitar bloqueos de IndexedDB en Iframes
             env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
-            self.postMessage({ action: 'status', payload: { text: 'Iniciando Motor de Vectores (RAG)...' } });
+            
+            self.postMessage({ action: 'status', payload: { text: 'Cargando Motor de Vectores (RAG)...' } });
             embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
                 device: 'webgpu',
                 progress_callback: (p) => self.postMessage({ action: 'progress', payload: { ...p, model: 'embedding' } })
