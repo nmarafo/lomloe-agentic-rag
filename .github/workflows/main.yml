@@ -15,4 +15,6 @@ jobs:
       - name: Push to hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: git push -f https://nmarafo:$HF_TOKEN@huggingface.co/spaces/nmarafo/lomloe-agentic-rag main
+        run: |
+          git remote add hf https://nmarafo:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/nmarafo/lomloe-agentic-rag
+          git push -f hf main
