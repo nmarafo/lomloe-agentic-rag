@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOMLOE Agentic RAG Workspace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+    
+    <!-- PDF.js from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+    </script>
+    <style>:root {
+    --glass: rgba(255, 255, 255, 0.08);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --accent: #bb8bff;
+    --accent-hover: #a370f7;
+    --bg: #0f1115;
+    --text: #e2e8f0;
+    --text-muted: #94a3b8;
+    --card-bg: rgba(30, 41, 59, 0.5);
+    --success: #34d399;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    background: var(--bg);
+    background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0f1115 100%);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 2rem;
+}
+.container { max-width: 1200px; margin: 0 auto; width: 100%; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+h1 {
+    font-size: 2.2rem; font-weight: 800; letter-spacing: -0.025em;
+    background: linear-gradient(to right, #fff, var(--accent));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.subtitle { color: var(--text-muted); font-size: 1rem; }
+.card {
+    background: var(--card-bg); border-radius: 20px; padding: 2rem;
+    border: 1px solid var(--glass-border); backdrop-filter: blur(12px); margin-bottom: 1.5rem;
+}
+.card.glass { box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37); }
+.hidden { display: none !important; }
+.view-section { animation: fadeIn 0.3s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Buttons */
+.primary-btn {
+    background: var(--accent); color: #fff; border: none; padding: 0.8rem 1.5rem;
+    border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;
+}
+.primary-btn:hover { background: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(187,139,255,0.3); }
+.glass-btn {
+    background: var(--glass); color: var(--text); border: 1px solid var(--glass-border);
+    padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s ease;
+}
+.glass-btn:hover { background: rgba(255,255,255,0.15); border-color: var(--accent); }
+.form-actions.space-between { display: flex; justify-content: space-between; margin-top: 2rem; }
+
+/* Dashboard Lists */
+.projects-list { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-top: 1.5rem; }
+.proj-card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 12px; padding: 1.5rem;
+    cursor: pointer; transition: all 0.2s;
+}
+.proj-card:hover { border-color: var(--accent); background: rgba(187,139,255,0.05); }
+.proj-card h3 { color: #fff; margin-bottom: 0.5rem; }
+.proj-card .meta { font-size: 0.85rem; color: var(--text-muted); }
+
+/* Forms */
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #fff; }
+.help-text { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.8rem; }
+.glass-input {
+    width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border);
+    border-radius: 10px; padding: 0.8rem 1rem; color: #fff; outline: none; transition: border-color 0.2s;
+}
+.glass-input:focus { border-color: var(--accent); }
+
+/* Upload Zones */
+.upload-zone {
+    border: 2px dashed var(--glass-border); padding: 2rem; border-radius: 12px;
+    text-align: center; color: var(--text-muted); cursor: pointer; transition: all 0.2s ease;
+}
+.upload-zone:hover { border-color: var(--accent); background: rgba(187,139,255,0.05); color: var(--accent); }
+.doc-list { list-style: none; margin-top: 1rem; }
+.doc-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0.8rem; background: rgba(0,0,0,0.2); border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.9rem;
+}
+.doc-item button { background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px; }
+
+/* Execution View */
+.execution-layout { display: grid; grid-template-columns: 280px 1fr; gap: 1.5rem; }
+.steps-list { list-style: none; margin-top: 1rem; }
+.step-item {
+    padding: 0.8rem 1rem; border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.9rem;
+    color: var(--text-muted); border-left: 3px solid transparent; transition: all 0.2s;
+}
+.step-item.pending { background: rgba(255,255,255,0.03); }
+.step-item.active { background: rgba(187,139,255,0.1); border-left-color: var(--accent); color: #fff; font-weight: 500; }
+.step-item.done { background: rgba(52,211,153,0.1); border-left-color: var(--success); color: var(--success); }
+
+.execution-canvas { display: flex; flex-direction: column; height: 600px; padding: 0; overflow: hidden; }
+.canvas-header { padding: 1rem 1.5rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--glass-border); }
+.ai-stream-log { flex-grow: 1; overflow-y: auto; padding: 1.5rem; font-family: monospace; font-size: 0.9rem; }
+.log-message { margin-bottom: 0.8rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255,255,255,0.05); }
+.log-message.system { color: var(--accent); }
+.log-message.error { color: #ef4444; }
+
+.tabs-bar { padding: 0.5rem 1rem; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--glass-border); display: flex; gap: 0.5rem;}
+.tab-btn { background: transparent; color: var(--text-muted); border: none; padding: 0.5rem 1rem; cursor:pointer; border-radius: 6px; }
+.tab-btn.active { background: var(--accent); color: #fff; }
+
+.indexing-progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 10px; display: none; }
+.indexing-progress-bar { height: 100%; width: 0%; background: linear-gradient(to right, #7c3aed, var(--accent)); transition: width 0.3s ease; box-shadow: 0 0 10px rgba(187, 139, 255, 0.5); }
+@keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; filter: brightness(1.2); } }
+</style>
+</head>
+<body>
+    <!-- SETUP ENVIRONMENT SPLASH SCREEN -->
+    <div id="setup-container" class="container" style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 80vh; text-align: center;">
+        <h1 style="font-size: 3rem; margin-bottom: 0.5rem;">LOMLOE AI Engine</h1>
+        <p class="subtitle" style="margin-bottom: 2rem; max-width: 600px;">Generador de Situaciones de Aprendizaje (100% WebGPU Local). Todo el proceso se realizará de forma privada en tu navegador.</p>
+        
+        <div class="card glass" style="width: 100%; max-width: 500px; padding: 2.5rem; text-align: left;">
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label style="font-size: 1.1rem; color:var(--accent); margin-bottom: 1rem;"><span style="margin-right:8px;">🧠</span>Selecciona el Motor de Inteligencia (LLM)</label>
+                <select id="llm-model-select" class="glass-input" style="padding: 1rem; font-size: 1rem; cursor: pointer;">
+                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B) - Rápido, ideal RAM baja</option>
+                    <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B) - Más preciso, exige GPU</option>
+                    <option value="Xenova/Qwen1.5-0.5B-Chat">Qwen 1.5 Chat 0.5B - Test súper ligero</option>
+                </select>
+            </div>
+            
+            <button id="init-btn" class="primary-btn" style="width: 100%; font-size: 1.2rem; padding: 1rem; margin-bottom: 1.5rem;">Inicializar Entorno WebGPU 🚀</button>
+            
+            <div id="setup-status" style="text-align: center; font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">Esperando inicio...</div>
+            
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;"><span>Motor de Vectores (RAG)</span><span id="setup-progress-embed-label">0%</span></div>
+                <div class="indexing-progress-container" style="display: block; margin-top:0;">
+                    <div class="indexing-progress-bar" id="setup-progress-embed" style="width: 0%; background: linear-gradient(to right, #34d399, #10b981);"></div>
+                </div>
+            </div>
+            
+            <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px;"><span>Motor Generativo (LLM)</span><span id="setup-progress-llm-label">0%</span></div>
+                <div class="indexing-progress-container" style="display: block; margin-top:0;">
+                    <div class="indexing-progress-bar" id="setup-progress-llm" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="app-container" class="container hidden">
+        <header>
+            <div class="header-content">
+                <h1>AI Programación LOMLOE</h1>
+                <p class="subtitle">Gestor de Situaciones de Aprendizaje (Local WebGPU)</p>
+
+            </div>
+            <div class="header-actions">
+                <button id="nav-projects-btn" class="glass-btn">Mis Proyectos</button>
+            </div>
+        </header>
+
+        <main id="app">
+            <!-- View: Dashboard Projects -->
+            <div id="view-dashboard" class="view-section active">
+                <div class="card glass">
+                    <h2>Tus Proyectos</h2>
+                    <ul id="projects-list" class="projects-list"></ul>
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                        <button id="btn-new-project" class="primary-btn">+ Nuevo Proyecto</button>
+                        <button id="btn-import-project" class="glass-btn">📥 Importar Proyecto</button>
+                        <input type="file" id="file-import-project" accept=".json" class="hidden">
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Project Configuration -->
+            <div id="view-project-config" class="view-section hidden">
+                <div class="card glass">
+                    <h2 id="config-title">Configurar Proyecto</h2>
+                    <div class="form-group">
+                        <label>Nombre del Proyecto</label>
+                        <input type="text" id="proj-name" class="glass-input" placeholder="Ej: Programación Música">
+                    </div>
+                    <div class="form-group">
+                        <label>Materia y Nivel (Afecta el prompt)</label>
+                        <input type="text" id="proj-materia" class="glass-input" placeholder="Ej: MÚSICA 2º ESO">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Archivos de Contexto Obligatorios (PDF/TXT)</label>
+                        <p class="help-text">Currículo Oficial de la materia y Rúbricas Consejería</p>
+                        <div class="upload-zone" id="drop-zone-obligatorio">📂 Arrastra o Haz click</div>
+                        <input type="file" id="file-obligatorio" multiple accept=".pdf,.txt,.md" class="hidden">
+                        <ul id="list-obligatorio" class="doc-list"></ul>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Archivos de Contexto Opcionales / Sustitutivos</label>
+                        <div class="help-text" style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-muted);">
+                            <strong>Aviso importante:</strong> Para alimentar correctamente a la automatización, descarga los siguientes documentos estándar (siguiendo las instrucciones originales) y súbelos en la zona de abajo. Opcionalmente puedes subir otros:
+                            <ul style="margin-left: 1.5rem; margin-top: 0.5rem; line-height: 1.8;">
+                                <li><a href="https://bit.ly/4qqARi8" target="_blank" style="color:var(--accent);">Pautas elaboración rúbricas</a> - Usado en Fase 2.</li>
+                                <li><strong>Calendario educativo, Rutinas, Dinámicas, Fases Merrill</strong> - Generalos con tu IA local (o pégalos en un txt/md).</li>
+                                <li><a href="https://bit.ly/4b00amc" target="_blank" style="color:var(--accent);">Objetivos de centro, Planes y Programas</a> - Usado en Secuenciación.</li>
+                                <li><a href="https://bit.ly/49yZ3cd" target="_blank" style="color:var(--accent);">Aplicación de los principios DUA</a> - Usado en las SAs.</li>
+                            </ul>
+                        </div>
+                        <div class="upload-zone" id="drop-zone-opcional">📂 Arrastra o Haz click</div>
+                        <input type="file" id="file-opcional" multiple accept=".pdf,.txt,.md" class="hidden">
+                        <ul id="list-opcional" class="doc-list"></ul>
+                        
+                        <!-- NEW AREA: Paste text as document -->
+                        <div style="background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                            <label style="font-size: 0.9rem;">Añadir texto directamente (Ej: Calendario Escolar)</label>
+                            <input type="text" id="text-title" class="glass-input" placeholder="Título (Ej: Calendario)" style="margin-bottom: 0.5rem; padding: 0.5rem;" />
+                            <textarea id="text-content" class="glass-input" placeholder="Pega aquí el contenido..." rows="3" style="resize: vertical; padding: 0.5rem;"></textarea>
+                            <button id="btn-add-text-doc" class="glass-btn" style="margin-top: 0.5rem; width: 100%; font-size: 0.9rem;">+ Añadir Texto como Documento</button>
+                        </div>
+                    </div>
+                    
+                    <!-- NEW AREA: Edit Workflow Prompts -->
+                    <div class="form-group" style="margin-top: 2rem; border-top: 1px solid var(--glass-border); padding-top: 1.5rem;">
+                        <h3 style="color:var(--accent); font-size: 1.1rem; margin-bottom: 1rem; cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="toggle-prompts-btn">
+                            ⚙️ Editar Instrucciones de Generación (Prompts) <span id="toggle-prompts-icon">▼</span>
+                        </h3>
+                        <div id="prompts-container" class="hidden" style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div><label>Fase 1: Deconstrucción Criterios</label><textarea id="prompt-f1" class="glass-input" rows="3"></textarea></div>
+                            <div><label>Fase 2: Elaboración Rúbricas</label><textarea id="prompt-f2" class="glass-input" rows="3"></textarea></div>
+                            <div><label>Fase 4: Secuenciación</label><textarea id="prompt-f4" class="glass-input" rows="3"></textarea></div>
+                            <div><label>Fase 5: Desarrollo SA</label><textarea id="prompt-f5" class="glass-input" rows="3"></textarea></div>
+                        </div>
+                    </div>
+
+
+                    
+                    <div class="form-actions space-between">
+                        <button id="btn-export-project" class="glass-btn">Exportar JSON</button>
+                        <div>
+                            <button id="btn-save-project" class="glass-btn" style="margin-right: 0.5rem;">Guardar Proyecto</button>
+                            <button id="btn-launch-workflow" class="primary-btn">Comenzar Generación SA 🚀</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Execution Workflow -->
+            <div id="view-execution" class="view-section hidden">
+                <div class="execution-layout">
+                    <!-- Sidebar: Steps Tracker -->
+                    <div class="card glass sidebar-steps">
+                        <h3>Progreso pipeline</h3>
+                        <ul class="steps-list">
+                            <li id="step-0" class="step-item pending">0. Inicializando AI y Vectores</li>
+                            <li id="step-1" class="step-item pending">1. Deconstrucción Criterios</li>
+                            <li id="step-2" class="step-item pending">2. Elaboración Rúbricas</li>
+                            <li id="step-3" class="step-item pending">3. Ecosistema de Herramientas</li>
+                            <li id="step-4" class="step-item pending">4. Secuenciación de SAs</li>
+                            <li id="step-5" class="step-item pending">5. Desarrollo de SAs (1..9)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Main Stream Canvas -->
+                    <div class="card glass execution-canvas">
+                        <div class="canvas-header" style="position: relative;">
+                            <h3 id="current-task-title">Esperando...</h3>
+                            <div class="indexing-progress-container" id="indexing-progress-container">
+                                <div class="indexing-progress-bar" id="indexing-progress-bar"></div>
+                            </div>
+                            <!-- Model Loading Progress -->
+                            <div class="indexing-progress-container" id="model-progress-container" style="display:none; margin-top: 5px; height: 18px; border-radius: 6px; position:relative; overflow:hidden;">
+                                <div id="model-progress-text" style="position: absolute; width: 100%; text-align: center; font-size: 0.75rem; line-height: 18px; color: white; text-shadow: 0px 0px 4px #000; z-index: 2;">Descargando...</div>
+                                <div class="indexing-progress-bar" id="model-progress-bar" style="background: linear-gradient(90deg, #bb8bff, #34d399); width: 0%; height:100%; transition: width 0.1s;"></div>
+                            </div>
+                        </div>
+                        <div id="ai-log" class="ai-stream-log">
+                            <div class="log-message system">Iniciando entorno local...</div>
+                        </div>
+                        <div class="tabs-bar" id="result-tabs" style="display:none;"></div>
+                        <div id="final-results-container" class="markdown-body" style="display:none; padding:1rem; overflow-y:auto; height: 400px; background: rgba(0,0,0,0.2); border-radius: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <!-- RAG logic & LLM logic -->
+    <script type="module">
+        import { create, insert, search } from 'https://cdn.jsdelivr.net/npm/@orama/orama@3.1.18/+esm';
+
+// --- 1. IndexedDB Wrapper for Projects ---
+const DB_NAME = 'LomloeAgentDB';
+const STORE_NAME = 'projects';
+
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+            }
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+    });
+}
+
+async function saveProject(proj) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(proj);
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
+    });
+}
+
+async function getProjects() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror = e => reject(e.target.error);
+    });
+}
+
+async function deleteProject(id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = e => reject(e.target.error);
+    });
+}
+
+// --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
+const aiWorkerCode = `
+let Transformers = null;
+let embeddingPipeline = null;
+let llmProcessor = null;
+let llmModel = null;
+
+self.onerror = (e) => {
+    self.postMessage({ action: 'error', payload: { message: "AI Worker Error: " + e.message } });
+};
+
+self.onmessage = async (e) => {
+    const { action, payload, id } = e.data;
+    try {
+        if (action === 'init') {
+            const { modelId } = payload;
+            self.postMessage({ action: 'status', payload: { text: 'Importando Transformers.js...' } });
+            
+            if (!Transformers) Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.2');
+            const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = Transformers;
+            env.allowLocalModels = false;
+            env.useBrowserCache = true;
+            self.postMessage({ action: 'status', payload: { text: 'Iniciando Motor de Vectores (RAG)...' } });
+            embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
+                device: 'webgpu',
+                progress_callback: (p) => self.postMessage({ action: 'progress', payload: { ...p, model: 'embedding' } })
+            });
+
+            self.postMessage({ action: 'status', payload: { text: 'Iniciando Motor Generativo (LLM)...' } });
+            const progressCb = (info) => {
+                if (info.status === 'progress' || info.progress !== undefined) {
+                     self.postMessage({ action: 'progress', payload: { ...info, model: 'llm' } });
+                }
+            };
+            if (modelId.includes("Qwen")) {
+                llmModel = await pipeline('text-generation', modelId, { 
+                    device: 'webgpu',
+                    progress_callback: progressCb
+                });
+                llmProcessor = { isFallback: true, tokenizer: llmModel.tokenizer };
+            } else {
+                llmProcessor = await AutoProcessor.from_pretrained(modelId);
+                llmModel = await AutoModelForCausalLM.from_pretrained(modelId, { 
+                    dtype: "q4f16",
+                    device: 'webgpu',
+                    progress_callback: progressCb
+                });
+            }
+
+            self.postMessage({ action: 'ready' });
+            
+        } else if (action === 'embed') {
+            const output = await embeddingPipeline(payload.text, { pooling: 'mean', normalize: true });
+            self.postMessage({ action: 'embed_result', id, payload: { vector: Array.from(output.data) } });
+            
+        } else if (action === 'generate') {
+            const { sys, prompt } = payload;
+            if(llmProcessor && llmProcessor.isFallback) {
+                 const messages = [ { role: "system", content: sys }, { role: "user", content: prompt } ];
+                 const promptTemplate = llmModel.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
+                 
+                 const streamer = new Transformers.TextStreamer(llmModel.tokenizer, {
+                     skip_prompt: true,
+                     skip_special_tokens: true,
+                     callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
+                 });
+                 
+                 await llmModel(promptTemplate, { max_new_tokens: 1536, streamer, do_sample: false });
+                 self.postMessage({ action: 'generate_complete' });
+            } else {
+                 const messages = [ { role: 'system', content: sys }, { role: 'user', content: [{ type: "text", text: prompt }] } ];
+                 const promptTemplate = llmProcessor.apply_chat_template(messages, { enable_thinking: false, add_generation_prompt: true });
+                 const inputs = await llmProcessor(promptTemplate);
+                 
+                 const streamer = new Transformers.TextStreamer(llmProcessor.tokenizer, {
+                     skip_prompt: true,
+                     skip_special_tokens: true,
+                     callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
+                 });
+                 
+                 await llmModel.generate({ ...inputs, max_new_tokens: 2048, do_sample: false, streamer });
+                 self.postMessage({ action: 'generate_complete' });
+            }
+        }
+    } catch (err) {
+        let errorMsg = err ? (err.message || String(err)) : "Undefined error in worker";
+        let errorStack = err ? err.stack : undefined;
+        self.postMessage({ action: 'error', payload: { message: errorMsg + (errorStack ? "\n" + errorStack : "") } });
+    }
+};
+`;
+
+const aiBlob = new Blob([aiWorkerCode], { type: 'application/javascript' });
+const aiWorker = new Worker(URL.createObjectURL(aiBlob), { type: 'module' });
+let isAiReady = false;
+
+// UI Initialization Bindings
+window.alert = function(msg) {
+    let t = document.getElementById('custom-toast');
+    if(!t) {
+        t = document.createElement('div');
+        t.id = 'custom-toast';
+        t.style.cssText = 'position:fixed; top:20px; left:50%; transform:translateX(-50%); padding:1rem 2rem; background:rgba(239, 68, 68, 0.95); color:white; font-weight:500; border-radius:12px; z-index:9999; box-shadow:0 10px 30px rgba(0,0,0,0.5); transition: opacity 0.3s; pointer-events:none;';
+        document.body.appendChild(t);
+    }
+    t.innerText = msg;
+    t.style.opacity = 1;
+    setTimeout(() => { t.style.opacity = 0; }, 4000);
+    console.warn("ALERT:", msg);
+};
+
+document.getElementById('init-btn').onclick = () => {
+    const btn = document.getElementById('init-btn');
+    btn.disabled = true;
+    btn.innerText = "Descargando Modelos...";
+    document.getElementById('setup-status').innerText = 'Iniciando descarga...';
+    aiWorker.postMessage({ action: 'init', payload: { modelId: document.getElementById('llm-model-select').value } });
+};
+
+aiWorker.onmessage = (e) => {
+    const { action, payload } = e.data;
+    if(action === 'status') {
+        document.getElementById('setup-status').innerText = payload.text;
+    }
+    else if(action === 'progress') {
+        const barId = payload.model === 'embedding' ? 'setup-progress-embed' : 'setup-progress-llm';
+        const lblId = payload.model === 'embedding' ? 'setup-progress-embed-label' : 'setup-progress-llm-label';
+        const fName = payload.file ? payload.file.split('/').pop() : 'pesos';
+        
+        const barEl = document.getElementById(barId);
+        const lblEl = document.getElementById(lblId);
+
+        if (payload.status === 'done') {
+            barEl.style.width = '100%';
+            barEl.style.animation = 'none';
+            barEl.style.background = '#10b981';
+            lblEl.innerText = `100% (${fName})`;
+        } else if (payload.progress !== undefined) {
+            const prog = Math.max(0, Math.min(100, payload.progress));
+            barEl.style.width = prog + '%';
+            barEl.style.animation = 'none';
+            lblEl.innerText = `${Math.round(prog)}% (${fName})`;
+        } else if (payload.loaded) {
+            const mb = (payload.loaded / 1024 / 1024).toFixed(1);
+            barEl.style.width = '100%';
+            barEl.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
+            if(!barEl.style.animation) barEl.style.animation = 'pulse 1s infinite alternate';
+            lblEl.innerText = `${mb}MB descargados (${fName})`;
+        }
+    }
+    else if(action === 'ready') {
+        isAiReady = true;
+        document.getElementById('setup-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+    }
+    else if(action === 'error') {
+        alert("Error crítico AI: " + payload.message);
+    }
+};
+
+class LocalRAG {
+    constructor() { this.db = null; }
+    async init() {
+        this.db = await create({
+            schema: { text: 'string', source: 'string', embedding: 'vector[384]' }, // MiniLM is 384 dims
+            indexStyles: { embedding: 'cosine' }
+        });
+    }
+    
+    async getEmbedding(text) {
+        if (!isAiReady) throw new Error("Motor webgpu no preparado.");
+        return new Promise((resolve) => {
+            const id = Date.now().toString() + Math.random();
+            const h = (e) => {
+                if (e.data.action === 'embed_result' && e.data.id === id) {
+                    aiWorker.removeEventListener('message', h);
+                    resolve(e.data.payload.vector);
+                }
+            };
+            aiWorker.addEventListener('message', h);
+            aiWorker.postMessage({ action: 'embed', id, payload: { text } });
+        });
+    }
+
+    async precalculateChunks(text, progressCb = null) {
+        // Intelligent Legal / Structural Chunker (ported from local-gemma4-rag)
+        const chunks = [];
+        let currentTitulo = 'Contexto General';
+        let currentCapitulo = '';
+        let currentSeccion = '';
+        let currentArticulo = '';
+        let rawBuffer = '';
+
+        const pushBuffer = () => {
+            if (rawBuffer.trim().length > 40) {
+                const size = 1000;
+                const overlap = 200;
+                let subChunks = [];
+                
+                if (rawBuffer.trim().length <= size) {
+                    subChunks.push(rawBuffer.trim());
+                } else {
+                    for (let i = 0; i < rawBuffer.length; i += size - overlap) {
+                        subChunks.push(rawBuffer.slice(i, i + size).trim());
+                        if (i + size >= rawBuffer.length) break;
+                    }
+                }
+                
+                subChunks.forEach(sub => {
+                    let contextArr = [];
+                    if (currentTitulo) contextArr.push(currentTitulo);
+                    if (currentCapitulo) contextArr.push(currentCapitulo);
+                    if (currentSeccion) contextArr.push(currentSeccion);
+                    if (currentArticulo) contextArr.push(currentArticulo);
+                    const header = `[ESTRUCTURA: ${contextArr.join(' | ')}]`;
+                    chunks.push(`${header}\n${sub}`);
+                });
+            }
+            rawBuffer = '';
+        };
+
+        const lines = text.split('\n');
+        for (let line of lines) {
+            line = line.trim();
+            if (!line) continue;
+            
+            if (line.match(/^(?:TÍTULO|Título)\s+[A-ZIVX]+/)) {
+                pushBuffer();
+                currentTitulo = line;
+                currentCapitulo = ''; currentSeccion = ''; currentArticulo = '';
+            } else if (line.match(/^(?:CAPÍTULO|Capítulo)\s+[A-ZIVX]+/)) {
+                pushBuffer();
+                currentCapitulo = line;
+                currentSeccion = ''; currentArticulo = '';
+            } else if (line.match(/^(?:Sección|SECCIÓN)\s+\d+/)) {
+                pushBuffer();
+                currentSeccion = line;
+                currentArticulo = '';
+            } else if (line.match(/^(?:Artículo|Art\.|Articulo)\s+\d+/i) || line.match(/^(?:Disposición|DISPOSICIÓN)/i)) {
+                pushBuffer();
+                currentArticulo = line;
+            }
+
+            rawBuffer += line + '\n';
+        }
+        pushBuffer();
+
+        const dataChunks = [];
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const vector = await this.getEmbedding(chunk);
+            dataChunks.push({ text: chunk, vector });
+            if (progressCb) progressCb(i + 1, chunks.length);
+        }
+        return dataChunks;
+    }
+
+    async addDocument(text, source, progressCb = null) {
+        const dataChunks = await this.precalculateChunks(text, progressCb);
+        for(const ch of dataChunks) {
+            await insert(this.db, { text: ch.text, source, embedding: ch.vector });
+        }
+    }
+
+    async queryContext(query, limit = 5) {
+        const vector = await this.getEmbedding(query);
+        const results = await search(this.db, {
+            mode: 'vector',
+            vector: { value: vector, property: 'embedding' },
+            similarity: 0.4,
+            limit
+        });
+        return results.hits.map(h => `[Fuente: ${h.document.source}] ${h.document.text}`).join('\n\n');
+    }
+}
+
+// --- 3. UI State and Flow ---
+let currentProject = null;
+let activeDocs = { formales: [], adicionales: [] };
+let ragDB = null;
+let llmWorker = null;
+
+const DEFAULT_PROMPTS = {
+    f1: "TU TAREA: Analizar los Criterios de Evaluación y diseñar su evaluación...\n\nSigue las instrucciones:\n1. Inventario del Criterio y lista de Descriptores.\n2. Diseño de 1 o 2 Instrumentos.\n3. Generación de Tabla obligatoria.",
+    f2: "TU TAREA: Elabora las rúbricas de cada Instrumento de Evaluación...",
+    f4: "TU TAREA: Distribuye los Contenidos de la materia en 9 Situaciones de Aprendizaje (SAs)...",
+    f5: "TU TAREA: Desarrolla en detalle la Situación de Aprendizaje"
+};
+
+const views = {
+    dashboard: document.getElementById('view-dashboard'),
+    config: document.getElementById('view-project-config'),
+    execution: document.getElementById('view-execution')
+};
+
+function showView(name) {
+    Object.values(views).forEach(v => v.classList.add('hidden'));
+    views[name].classList.remove('hidden');
+}
+
+document.getElementById('toggle-prompts-btn').onclick = () => {
+    const c = document.getElementById('prompts-container');
+    const i = document.getElementById('toggle-prompts-icon');
+    if(c.classList.contains('hidden')) { c.classList.remove('hidden'); i.innerText = '▲'; }
+    else { c.classList.add('hidden'); i.innerText = '▼'; }
+};
+
+// Nav
+document.getElementById('nav-projects-btn').onclick = async () => {
+    await renderDashboard();
+    showView('dashboard');
+};
+
+async function renderDashboard() {
+    const list = document.getElementById('projects-list');
+    list.innerHTML = '';
+    const projs = await getProjects();
+    if(projs.length === 0) {
+        list.innerHTML = '<p class="help-text">No hay proyectos. Crea uno nuevo.</p>';
+        return;
+    }
+    projs.forEach(p => {
+        const div = document.createElement('li');
+        div.className = 'proj-card';
+        div.style.position = 'relative'; // Required for absolute btn
+
+        const content = document.createElement('div');
+        content.innerHTML = `<h3>${p.name}</h3><span class="meta">${p.materiaNivel}</span>`;
+        content.onclick = () => loadProjectConfig(p);
+
+        const delBtn = document.createElement('button');
+        delBtn.innerHTML = '🗑️';
+        delBtn.style.cssText = 'position:absolute; right:1rem; top:1rem; background:transparent; border:none; font-size:1.2rem; cursor:pointer; opacity: 0.6; transition: opacity 0.2s;';
+        delBtn.onmouseover = () => delBtn.style.opacity = '1';
+        delBtn.onmouseout = () => delBtn.style.opacity = '0.6';
+        delBtn.onclick = async (e) => {
+            e.stopPropagation(); // Avoid triggering card click
+            if(confirm("¿Estás seguro de que quieres eliminar este proyecto para siempre?")) {
+                await deleteProject(p.id);
+                await renderDashboard(); // Refresh list
+            }
+        };
+
+        div.appendChild(content);
+        div.appendChild(delBtn);
+        list.appendChild(div);
+    });
+}
+
+document.getElementById('btn-new-project').onclick = () => {
+    currentProject = { id: Date.now().toString(), name: '', materiaNivel: '', docs: [], prompts: { ...DEFAULT_PROMPTS }, results: {} };
+    activeDocs = { formales: [], adicionales: [] };
+    document.getElementById('proj-name').value = '';
+    document.getElementById('proj-materia').value = '';
+    
+    document.getElementById('prompt-f1').value = currentProject.prompts.f1;
+    document.getElementById('prompt-f2').value = currentProject.prompts.f2;
+    document.getElementById('prompt-f4').value = currentProject.prompts.f4;
+    document.getElementById('prompt-f5').value = currentProject.prompts.f5;
+    
+    renderDocs();
+    showView('config');
+};
+
+document.getElementById('btn-import-project').onclick = () => {
+    document.getElementById('file-import-project').click();
+};
+
+document.getElementById('file-import-project').onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const text = await file.text();
+    try {
+        const proj = JSON.parse(text);
+        if(!proj.id || !proj.name) throw new Error("JSON Inválido");
+        await saveProject(proj);
+        alert('Proyecto importado con éxito');
+        await renderDashboard();
+    } catch(err) {
+        alert("Error al importar el proyecto: " + err.message);
+    }
+};
+
+document.getElementById('btn-export-project').onclick = () => {
+    if(!currentProject) return;
+    currentProject.name = document.getElementById('proj-name').value || 'Proyecto';
+    currentProject.materiaNivel = document.getElementById('proj-materia').value;
+    currentProject.docs = [...activeDocs.formales, ...activeDocs.adicionales];
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentProject, null, 2));
+    const dlAnchorElem = document.createElement('a');
+    dlAnchorElem.setAttribute("href", dataStr);
+    dlAnchorElem.setAttribute("download", currentProject.name.replace(/\s+/g, '_') + "_export.json");
+    dlAnchorElem.click();
+};
+
+function loadProjectConfig(p) {
+    currentProject = p;
+    // Retrocompatibilidad if prompts are missing
+    if(!currentProject.prompts) currentProject.prompts = { ...DEFAULT_PROMPTS };
+    
+    document.getElementById('proj-name').value = p.name;
+    document.getElementById('proj-materia').value = p.materiaNivel;
+    
+    document.getElementById('prompt-f1').value = currentProject.prompts.f1;
+    document.getElementById('prompt-f2').value = currentProject.prompts.f2;
+    document.getElementById('prompt-f4').value = currentProject.prompts.f4;
+    document.getElementById('prompt-f5').value = currentProject.prompts.f5;
+    
+    activeDocs = { formales: (p.docs || []).filter(d => d.type === 'formal'), adicionales: (p.docs || []).filter(d => d.type === 'adicional') };
+    
+    // Check missing vectorizations for backwards compatibility
+    const checkAndVec = (list) => {
+        list.forEach(d => { if(!d.chunks && !d.vectorizing) backgroundVectorize(d); });
+    };
+    checkAndVec(activeDocs.formales);
+    checkAndVec(activeDocs.adicionales);
+    
+    renderDocs();
+    showView('config');
+}
+
+// Background vectorizer
+const tempVectorizer = new LocalRAG();
+
+async function backgroundVectorize(docObj) {
+    try {
+        docObj.vectorizing = true;
+        renderDocs();
+        docObj.chunks = await tempVectorizer.precalculateChunks(docObj.text, (cur, tot) => {
+            docObj.progress = Math.round((cur/tot)*100);
+            renderDocs();
+        });
+    } catch(e) {
+        console.error("Vectorization err:", e);
+        alert("Error vectorizando " + docObj.name + ". Revisa CORS en Ollama.");
+    } finally {
+        docObj.vectorizing = false;
+        renderDocs();
+    }
+}
+
+document.getElementById('btn-save-project').onclick = async () => {
+    if(!currentProject) return;
+    currentProject.name = document.getElementById('proj-name').value || 'Proyecto sin nombre';
+    currentProject.materiaNivel = document.getElementById('proj-materia').value;
+    currentProject.docs = [...activeDocs.formales, ...activeDocs.adicionales];
+    
+    currentProject.prompts = {
+        f1: document.getElementById('prompt-f1').value,
+        f2: document.getElementById('prompt-f2').value,
+        f4: document.getElementById('prompt-f4').value,
+        f5: document.getElementById('prompt-f5').value
+    };
+    
+    await saveProject(currentProject);
+    alert('Proyecto guardado correctamente');
+};
+
+// --- Docs Upload handlers ---
+const zObligatorio = document.getElementById('drop-zone-obligatorio');
+const iObligatorio = document.getElementById('file-obligatorio');
+zObligatorio.onclick = () => iObligatorio.click();
+iObligatorio.onchange = async e => { await handleFiles(e.target.files, 'formal'); };
+
+const zOpcional = document.getElementById('drop-zone-opcional');
+const iOpcional = document.getElementById('file-opcional');
+zOpcional.onclick = () => iOpcional.click();
+iOpcional.onchange = async e => { await handleFiles(e.target.files, 'adicional'); };
+
+document.getElementById('btn-add-text-doc').onclick = () => {
+    const title = document.getElementById('text-title').value.trim();
+    const content = document.getElementById('text-content').value.trim();
+    if(!title || !content) return alert('Rellena el título y el contenido');
+    const newDoc = { name: title + '.txt', text: content, type: 'adicional' };
+    activeDocs.adicionales.push(newDoc);
+    document.getElementById('text-title').value = '';
+    document.getElementById('text-content').value = '';
+    backgroundVectorize(newDoc);
+};
+
+async function handleFiles(files, type) {
+    for (let f of files) {
+        let text = '';
+        if(f.type === 'application/pdf') text = await extractPdf(f);
+        else text = await f.text();
+        
+        const newDoc = { name: f.name, text, type };
+        if (type === 'formal') activeDocs.formales.push(newDoc);
+        else activeDocs.adicionales.push(newDoc);
+        
+        backgroundVectorize(newDoc);
+    }
+}
+
+async function extractPdf(file) {
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let text = '';
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+    }
+    return text;
+}
+
+window.removeDoc = (type, i) => {
+    if (type === 'formal') activeDocs.formales.splice(i, 1);
+    else activeDocs.adicionales.splice(i, 1);
+    renderDocs();
+};
+
+function renderDocs() {
+    const rf = document.getElementById('list-obligatorio'); rf.innerHTML = '';
+    activeDocs.formales.forEach((d, i) => {
+        let status = d.chunks ? "✅" : (d.vectorizing ? `⏳ ${d.progress||0}%` : "⚠️");
+        rf.innerHTML += `<li class="doc-item">📄 ${d.name} <div style="margin-left:auto;margin-right:10px">${status}</div> <button onclick="window.removeDoc('formal', ${i})">❌</button></li>`;
+    });
+    
+    const ro = document.getElementById('list-opcional'); ro.innerHTML = '';
+    activeDocs.adicionales.forEach((d, i) => {
+        let status = d.chunks ? "✅" : (d.vectorizing ? `⏳ ${d.progress||0}%` : "⚠️");
+        ro.innerHTML += `<li class="doc-item">📄 ${d.name} <div style="margin-left:auto;margin-right:10px">${status}</div> <button onclick="window.removeDoc('adicional', ${i})">❌</button></li>`;
+    });
+}
+
+// --- The Agent Execution Pipeline ---
+const aiLog = document.getElementById('ai-log');
+function logUI(msg, isSystem=false, isError=false) {
+    const div = document.createElement('div');
+    div.className = `log-message ${isSystem?'system':''} ${isError?'error':''}`;
+    div.innerText = msg;
+    aiLog.appendChild(div);
+    aiLog.scrollTop = aiLog.scrollHeight;
+}
+
+document.getElementById('btn-launch-workflow').onclick = async () => {
+    if(!currentProject.materiaNivel) return alert("Debes rellenar la Materia y Nivel");
+    if(activeDocs.formales.length === 0) return alert("Falta documento obligatorio (Currículo/Rúbricas)");
+    
+    showView('execution');
+    aiLog.innerHTML = '';
+    logUI("Inicializando Entorno AI...", true);
+    
+    // 1. Start RAG
+    document.getElementById('step-0').className = 'step-item active';
+    ragDB = new LocalRAG();
+    await ragDB.init();
+    
+    logUI("Cargando vectores cacheados en Memoria (Orama DB)...");
+
+    const allDocs = [...activeDocs.formales, ...activeDocs.adicionales];
+    for (let i = 0; i < allDocs.length; i++) {
+        const d = allDocs[i];
+        if(d.vectorizing) {
+            alert(`Espera a que termine de vectorizarse: ${d.name}`);
+            return;
+        }
+        if(!d.chunks) continue;
+        for(let ch of d.chunks) {
+            const { insert } = await import('https://cdn.jsdelivr.net/npm/@orama/orama@3.1.18/+esm');
+            await insert(ragDB.db, { text: ch.text, source: d.name, embedding: ch.vector });
+        }
+        logUI(`En memoria: ${d.name}`);
+    }
+    
+    document.getElementById('step-0').className = 'step-item done';
+    logUI("AI Engine pre-cargado globalmente. Comenzando pipeline...", true);
+    await startAgentPipeline();
+};
+
+async function promptModel(sys, promptTxt, streamCb) {
+    return new Promise((resolve) => {
+        let fullOutput = "";
+        const id = Date.now().toString();
+        const handler = (e) => {
+            const { action, payload } = e.data;
+            if(action === 'chunk') {
+                fullOutput += payload.text;
+                if(streamCb) streamCb(payload.text);
+            }
+            if(action === 'generate_complete') {
+                aiWorker.removeEventListener('message', handler);
+                resolve(fullOutput);
+            }
+            if(action === 'error') {
+                logUI("GError: " + payload.message, false, true);
+                resolve("");
+            }
+        };
+        aiWorker.addEventListener('message', handler);
+        aiWorker.postMessage({ action: 'generate', payload: { sys, prompt: promptTxt } });
+    });
+}
+
+function updateStepUI(stepIndex) {
+    for(let i=1; i<=5; i++) {
+        const el = document.getElementById('step-'+i);
+        if(i < stepIndex) el.className = 'step-item done';
+        else if (i === stepIndex) el.className = 'step-item active';
+        else el.className = 'step-item pending';
+    }
+}
+
+async function startAgentPipeline() {
+    const materia = currentProject.materiaNivel;
+    const sysPrompt = "Actúa como un docente experto en la normativa LOMLOE de Canarias. Contesta SIEMPRE en español con gran detalle y estructura en formato Markdown.";
+    
+    // STEP 1
+    updateStepUI(1);
+    document.getElementById('current-task-title').innerText = "Fase 1: Deconstrucción Criterios";
+    const contextS1 = await ragDB.queryContext(`Criterios de Evaluación y Descriptores Operativos de ${materia}`, 10);
+    const p1 = `Contexto del currículo local:\n${contextS1}\n\n${currentProject.prompts.f1}`;
+    
+    logUI(">> Generando Criterios...", true);
+    currentProject.results.fase1 = await promptModel(sysPrompt, p1, (chunk) => { /* Live viewer */ });
+    logUI("Fase 1 completada.");
+
+    // STEP 2
+    updateStepUI(2);
+    document.getElementById('current-task-title').innerText = "Fase 2: Elaboración Rúbricas";
+    const contextS2 = await ragDB.queryContext(`Pautas elaboración rúbricas y graduadores`, 5);
+    const p2 = `Contexto Pautas: \n${contextS2}\n\nSalida anterior:\n${currentProject.results.fase1}\n\n${currentProject.prompts.f2}`;
+    
+    logUI(">> Generando Rúbricas...", true);
+    currentProject.results.fase2 = await promptModel(sysPrompt, p2);
+    logUI("Fase 2 completada.");
+
+    // SKIP STEP 3 GENERATION...
+    updateStepUI(3);
+    document.getElementById('current-task-title').innerText = "Fase 3: Ecosistema NotebookLM";
+    logUI(">> Generando Ecosistema Opcional...", true);
+    currentProject.results.fase3 = "Ecosistema generado internamente.";
+    
+    // STEP 4
+    updateStepUI(4);
+    document.getElementById('current-task-title').innerText = "Fase 4: Secuenciación SAs";
+    const contextS4 = await ragDB.queryContext(`Objetivos de centro, Planes y Programas`, 5);
+    const p4 = `Contexto Centro:\n${contextS4}\nSalida 1:\n${currentProject.results.fase1}\nSalida 2:\n${currentProject.results.fase2}\n\n${currentProject.prompts.f4}`;
+    
+    logUI(">> Secuenciando Programación...", true);
+    currentProject.results.fase4 = await promptModel(sysPrompt, p4);
+    
+    // STEP 5
+    updateStepUI(5);
+    document.getElementById('current-task-title').innerText = "Fase 5: Desarrollo SA";
+    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 5);
+    currentProject.results.fase5 = "";
+    
+    let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9
+    for(let sa=1; sa<=maxSAs; sa++) {
+        logUI(`>> Desarrollando SA ${sa}...`, true);
+        const p5 = `Contexto DUA y Métodos:\n${contextS5}\nSecuenciación general:\n${currentProject.results.fase4}\n\n${currentProject.prompts.f5} nº ${sa}...`;
+        currentProject.results.fase5 += `\n\n## SA ${sa}\n` + await promptModel(sysPrompt, p5);
+    }
+    
+    // Done
+    await saveProject(currentProject);
+    updateStepUI(6); // To turn 5 to done
+    document.getElementById('current-task-title').innerText = "¡Pipeline Finalizado!";
+    logUI("Generación completa. Revisa las pestañas de resultados.", true);
+    renderResults();
+}
+
+function renderResults() {
+    const rc = document.getElementById('final-results-container');
+    const tabs = document.getElementById('result-tabs');
+    rc.style.display = 'block';
+    tabs.style.display = 'flex';
+    tabs.innerHTML = '';
+    
+    const kData = [
+        {k: 'fase1', l: 'Criterios'},
+        {k: 'fase2', l: 'Rúbricas'},
+        {k: 'fase4', l: 'Secuenciación'},
+        {k: 'fase5', l: 'Desarrollo SA'}
+    ];
+    
+    kData.forEach((item, idx) => {
+        const btn = document.createElement('button');
+        btn.className = `tab-btn ${idx===0?'active':''}`;
+        btn.innerText = item.l;
+        btn.onclick = () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            rc.innerHTML = window.marked.parse(currentProject.results[item.k] || '*Vacio*');
+        };
+        tabs.appendChild(btn);
+    });
+    rc.innerHTML = window.marked.parse(currentProject.results.fase1 || '*Vacio*');
+}
+
+
+    </script>
+</body>
+</html>
