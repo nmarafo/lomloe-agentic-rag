@@ -1,6 +1,6 @@
 ---
 title: LOMLOE Agentic RAG
-emoji: 🇪🇸
+emoji: 🧠
 colorFrom: purple
 colorTo: blue
 sdk: static

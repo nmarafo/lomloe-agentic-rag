@@ -16,6 +16,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          set -o pipefail
           if [ -z "$HF_TOKEN" ]; then
             echo "::error::El secreto HF_TOKEN no existe o está vacío. Ve a Settings > Secrets > Actions."
             exit 1
