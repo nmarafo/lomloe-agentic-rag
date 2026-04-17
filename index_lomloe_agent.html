@@ -451,9 +451,7 @@ self.onmessage = async (e) => {
             }
         }
     } catch (err) {
-        let errorMsg = err ? (err.message || String(err)) : "Undefined error in worker";
-        let errorStack = err ? err.stack : undefined;
-        self.postMessage({ action: 'error', payload: { message: errorMsg + (errorStack ? "\n" + errorStack : "") } });
+        self.postMessage({ action: 'error', payload: { message: (err.message || String(err)) } });
     }
 };
 `;
