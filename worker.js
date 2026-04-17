@@ -1,4 +1,5 @@
-import { pipeline, env, AutoProcessor, AutoModelForCausalLM, TextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest';
+// Modo Clásico (no-module) para máxima compatibilidad offline
+importScripts('./transformers.min.js');
 
 let embeddingPipeline = null;
 let llmProcessor = null;
@@ -14,10 +15,12 @@ self.onmessage = async (e) => {
     try {
         if (action === 'init') {
             const { modelId } = payload;
-            self.postMessage({ action: 'status', payload: { text: 'Configurando Motor WebGPU...' } });
+            const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = transformers;
+
+            self.postMessage({ action: 'status', payload: { text: 'Configurando Motor WebGPU (Cache ON)...' } });
             
             env.allowLocalModels = false;
-            env.useBrowserCache = false; 
+            env.useBrowserCache = true; // ACTIVAMOS PERSISTENCIA
             env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
             env.backends.onnx.wasm.numThreads = 1;
             
@@ -62,7 +65,7 @@ self.onmessage = async (e) => {
                  const messages = [ { role: "system", content: sys }, { role: "user", content: prompt } ];
                  const promptTemplate = llmModel.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
                  
-                 const streamer = new TextStreamer(llmModel.tokenizer, {
+                 const streamer = new transformers.TextStreamer(llmModel.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
                      callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
@@ -75,7 +78,7 @@ self.onmessage = async (e) => {
                  const promptTemplate = llmProcessor.apply_chat_template(messages, { enable_thinking: false, add_generation_prompt: true });
                  const inputs = await llmProcessor(promptTemplate);
                  
-                 const streamer = new TextStreamer(llmProcessor.tokenizer, {
+                 const streamer = new transformers.TextStreamer(llmProcessor.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
                      callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })

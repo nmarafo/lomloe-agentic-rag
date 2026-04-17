@@ -352,7 +352,7 @@ async function deleteProject(id) {
 }
 
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
-const aiWorker = new Worker('worker.js', { type: 'module' });
+const aiWorker = new Worker('worker.js');
 let isAiReady = false;
 
 // UI Initialization Bindings
