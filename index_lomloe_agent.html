@@ -354,7 +354,7 @@ async function deleteProject(id) {
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
 const aiWorkerCode = `
 try {
-    importScripts('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.2/dist/transformers.min.js');
+    importScripts('transformers.min.js');
 } catch (e) {
     self.postMessage({ action: 'error', payload: { message: "Error importScripts: " + e.message } });
 }
