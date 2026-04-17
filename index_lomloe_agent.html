@@ -353,16 +353,23 @@ async function deleteProject(id) {
 
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
 const aiWorkerCode = `
-let Transformers = null;
+try {
+    importScripts('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.2/dist/transformers.min.js');
+} catch (e) {
+    self.postMessage({ action: 'error', payload: { message: "Error importScripts: " + e.message } });
+}
+
 let embeddingPipeline = null;
 let llmProcessor = null;
 let llmModel = null;
 
-// Enviar status inicial nada más arrancar el script para confirmar vida
-self.postMessage({ action: 'status', payload: { text: 'AI Engine despertando...' } });
+// Heartbeat para confirmar que el trabajador está vivo
+setInterval(() => {
+    self.postMessage({ action: 'heartbeat', payload: { now: Date.now() } });
+}, 1000);
 
 self.onerror = (e) => {
-    self.postMessage({ action: 'error', payload: { message: "AI Worker Error: " + e.message } });
+    self.postMessage({ action: 'error', payload: { message: "AI Worker Global Error: " + (e.message || e) } });
 };
 
 self.onmessage = async (e) => {
@@ -370,25 +377,21 @@ self.onmessage = async (e) => {
     try {
         if (action === 'init') {
             const { modelId } = payload;
-            self.postMessage({ action: 'status', payload: { text: 'Importando Transformers.js...' } });
+            self.postMessage({ action: 'status', payload: { text: 'Configurando Motor WebGPU...' } });
             
-            if (!Transformers) Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
-            const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = Transformers;
+            // En el UMD build todo está en el objeto global 'transformers'
+            const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = transformers;
             
-            // CONFIGURACIÓN DE SEGURIDAD PARA SANDBOX (MODO FORZADO)
+            // CONFIGURACIÓN DE SEGURIDAD PARA SANDBOX
             env.allowLocalModels = false;
             env.useBrowserCache = false; 
             env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
-            env.backends.onnx.wasm.numThreads = 1; // FORZAR 1 HILO para evitar bloqueo COOP/COEP
+            env.backends.onnx.wasm.numThreads = 1;
             
-            console.log("AI Worker: Bibliotecas cargadas. Iniciando RAG...");
             self.postMessage({ action: 'status', payload: { text: 'Cargando Motor de Vectores (RAG)...' } });
             embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
                 device: 'webgpu',
-                progress_callback: (p) => {
-                    console.log("AI Worker RAG Progress:", p);
-                    self.postMessage({ action: 'progress', payload: { ...p, model: 'embedding' } });
-                }
+                progress_callback: (p) => self.postMessage({ action: 'progress', payload: { ...p, model: 'embedding' } })
             });
 
             self.postMessage({ action: 'status', payload: { text: 'Iniciando Motor Generativo (LLM)...' } });
@@ -424,7 +427,7 @@ self.onmessage = async (e) => {
                  const messages = [ { role: "system", content: sys }, { role: "user", content: prompt } ];
                  const promptTemplate = llmModel.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
                  
-                 const streamer = new Transformers.TextStreamer(llmModel.tokenizer, {
+                 const streamer = new transformers.TextStreamer(llmModel.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
                      callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
@@ -437,7 +440,7 @@ self.onmessage = async (e) => {
                  const promptTemplate = llmProcessor.apply_chat_template(messages, { enable_thinking: false, add_generation_prompt: true });
                  const inputs = await llmProcessor(promptTemplate);
                  
-                 const streamer = new Transformers.TextStreamer(llmProcessor.tokenizer, {
+                 const streamer = new transformers.TextStreamer(llmProcessor.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
                      callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
@@ -456,7 +459,7 @@ self.onmessage = async (e) => {
 `;
 
 const aiBlob = new Blob([aiWorkerCode], { type: 'application/javascript' });
-const aiWorker = new Worker(URL.createObjectURL(aiBlob), { type: 'module' });
+const aiWorker = new Worker(URL.createObjectURL(aiBlob));
 let isAiReady = false;
 
 // UI Initialization Bindings
@@ -484,7 +487,10 @@ document.getElementById('init-btn').onclick = () => {
 
 aiWorker.onmessage = (e) => {
     const { action, payload } = e.data;
-    if(action === 'status') {
+    if (action === 'heartbeat') {
+        console.log("AI Worker Heartbeat:", payload.now);
+    }
+    else if(action === 'status') {
         document.getElementById('setup-status').innerText = payload.text;
     }
     else if(action === 'progress') {
