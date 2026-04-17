@@ -22,5 +22,17 @@ jobs:
           fi
           git config --global user.email "actions@github.com"
           git config --global user.name "github-actions"
-          git remote add hf https://nmarafo:$HF_TOKEN@huggingface.co/spaces/nmarafo/lomloe-agentic-rag
-          git push -f hf main
+          
+          # URL segura (sin echo para no filtrar el token)
+          HF_URL="https://nmarafo:$HF_TOKEN@huggingface.co/spaces/nmarafo/lomloe-agentic-rag"
+          
+          echo "Verificando conexión con Hugging Face..."
+          if ! git ls-remote "$HF_URL" > /dev/null 2>&1; then
+            echo "::error::Error de Autenticación: El token es inválido o el usuario/espacio no existe."
+            exit 1
+          fi
+          
+          git remote add hf "$HF_URL"
+          echo "Sincronizando..."
+          # Intenta push a main, y si falla (porque HF use master), intenta a master
+          git push -f hf main || git push -f hf main:master
