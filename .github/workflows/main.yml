@@ -16,5 +16,11 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git remote add hf https://nmarafo:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/nmarafo/lomloe-agentic-rag
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::error::El secreto HF_TOKEN no existe o está vacío. Ve a Settings > Secrets > Actions."
+            exit 1
+          fi
+          git config --global user.email "actions@github.com"
+          git config --global user.name "github-actions"
+          git remote add hf https://nmarafo:$HF_TOKEN@huggingface.co/spaces/nmarafo/lomloe-agentic-rag
           git push -f hf main
