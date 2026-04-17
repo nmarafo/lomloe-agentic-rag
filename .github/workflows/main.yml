@@ -34,5 +34,5 @@ jobs:
           
           git remote add hf "$HF_URL"
           echo "Sincronizando..."
-          # Intenta push a main, y si falla (porque HF use master), intenta a master
-          git push -f hf main || git push -f hf main:master
+          # Usamos HEAD:rama para evitar errores de 'detached HEAD' en Actions
+          git push -f hf HEAD:main || git push -f hf HEAD:master
