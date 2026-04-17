@@ -369,10 +369,11 @@ self.onmessage = async (e) => {
             const { modelId } = payload;
             self.postMessage({ action: 'status', payload: { text: 'Importando Transformers.js...' } });
             
-            if (!Transformers) Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.3.2');
+            if (!Transformers) Transformers = await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@latest');
             const { env, pipeline, AutoProcessor, AutoModelForCausalLM, TextStreamer } = Transformers;
             env.allowLocalModels = false;
             env.useBrowserCache = true;
+            env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@latest/dist/';
             self.postMessage({ action: 'status', payload: { text: 'Iniciando Motor de Vectores (RAG)...' } });
             embeddingPipeline = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { 
                 device: 'webgpu',
