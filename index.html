@@ -113,7 +113,7 @@ h1 {
 .execution-canvas { display: flex; flex-direction: column; height: 600px; padding: 0; overflow: hidden; }
 .canvas-header { padding: 1rem 1.5rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--glass-border); }
 .ai-stream-log { flex-grow: 1; overflow-y: auto; padding: 1.5rem; font-family: monospace; font-size: 0.9rem; }
-.log-message { margin-bottom: 0.8rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255,255,255,0.05); }
+.log-message { margin-bottom: 0.8rem; padding: 0.5rem 1rem; border-radius: 8px; background: rgba(255,255,255,0.05); white-space: pre-wrap; word-break: break-word; }
 .log-message.system { color: var(--accent); }
 .log-message.error { color: #ef4444; }
 
@@ -878,7 +878,7 @@ async function startAgentPipeline() {
     logUI(">> Analizando y generatriz de Criterios...", true);
     const logEl1 = logUI("");
     currentProject.results.fase1 = await promptModel(sysPrompt, p1, (chunk) => {
-        logEl1.innerText += chunk;
+        logEl1.textContent += chunk;
         aiLog.scrollTop = aiLog.scrollHeight;
     });
     logUI("Fase 1 completada.");
@@ -892,7 +892,7 @@ async function startAgentPipeline() {
     logUI(">> Generando Rúbricas...", true);
     const logEl2 = logUI("");
     currentProject.results.fase2 = await promptModel(sysPrompt, p2, (chunk) => {
-        logEl2.innerText += chunk;
+        logEl2.textContent += chunk;
         aiLog.scrollTop = aiLog.scrollHeight;
     });
     logUI("Fase 2 completada.");
@@ -912,7 +912,7 @@ async function startAgentPipeline() {
     logUI(">> Secuenciando Programación...", true);
     const logEl4 = logUI("");
     currentProject.results.fase4 = await promptModel(sysPrompt, p4, (chunk) => {
-        logEl4.innerText += chunk;
+        logEl4.textContent += chunk;
         aiLog.scrollTop = aiLog.scrollHeight;
     });
     
@@ -928,7 +928,7 @@ async function startAgentPipeline() {
         const p5 = `Contexto DUA y Métodos:\n${contextS5}\nSecuenciación general:\n${currentProject.results.fase4}\n\n${currentProject.prompts.f5} nº ${sa}...`;
         const logEl5 = logUI("");
         const resSA = await promptModel(sysPrompt, p5, (chunk) => {
-            logEl5.innerText += chunk;
+            logEl5.textContent += chunk;
             aiLog.scrollTop = aiLog.scrollHeight;
         });
         currentProject.results.fase5 += `\n\n## SA ${sa}\n` + resSA;
