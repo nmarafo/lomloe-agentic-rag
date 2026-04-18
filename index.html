@@ -174,9 +174,9 @@ h1 {
             <div class="header-content">
                 <h1>AI Programación LOMLOE</h1>
                 <p class="subtitle">Gestor de Situaciones de Aprendizaje (Local WebGPU)</p>
-
             </div>
-            <div class="header-actions">
+            <div class="header-actions" style="display: flex; gap: 0.8rem;">
+                <button onclick="resetAIEngine()" class="glass-btn" style="color:#ef4444; border-color: rgba(239, 68, 68, 0.3);">🔄 Reiniciar IA</button>
                 <button id="nav-projects-btn" class="glass-btn">Mis Proyectos</button>
             </div>
         </header>
@@ -359,8 +359,38 @@ async function deleteProject(id) {
 }
 
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
-const aiWorker = new Worker('worker.js?v=22', { type: 'module' });
+const workerVersion = '22';
+let aiWorker = new Worker(`worker.js?v=${workerVersion}`, { type: 'module' });
 let isAiReady = false;
+
+function resetAIEngine() {
+    if(confirm("¿Seguro que quieres reiniciar el motor de IA? Se liberará la memoria de la GPU y volverás a la pantalla de inicio.")) {
+        isAiReady = false;
+        aiWorker.terminate();
+        
+        // Re-init worker
+        aiWorker = new Worker(`worker.js?v=${workerVersion}`, { type: 'module' });
+        aiWorker.onmessage = handleWorkerMessage;
+        
+        // Reset UI
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('setup-container').classList.remove('hidden');
+        document.getElementById('init-btn').disabled = false;
+        document.getElementById('init-btn').innerText = "Inicializar Entorno WebGPU 🚀";
+        document.getElementById('setup-status').innerText = 'Motor reiniciado. Esperando inicio...';
+        
+        // Reset Progress Bars
+        ['setup-progress-embed', 'setup-progress-llm'].forEach(id => {
+            const el = document.getElementById(id);
+            el.style.width = '0%';
+            el.style.animation = 'none';
+            el.style.background = 'linear-gradient(to right, #7c3aed, var(--accent))';
+        });
+        ['setup-progress-embed-label', 'setup-progress-llm-label'].forEach(id => {
+            document.getElementById(id).innerText = '0%';
+        });
+    }
+}
 
 // UI Initialization Bindings
 window.alert = function(msg) {
@@ -385,7 +415,10 @@ document.getElementById('init-btn').onclick = () => {
     aiWorker.postMessage({ action: 'init', payload: { modelId: document.getElementById('llm-model-select').value } });
 };
 
-aiWorker.onmessage = (e) => {
+// Centralized message handler
+aiWorker.onmessage = handleWorkerMessage;
+
+function handleWorkerMessage(e) {
     const { action, payload } = e.data;
     if (action === 'heartbeat') {
         // Silenced heartbeat log as requested by user
