@@ -381,7 +381,7 @@ document.getElementById('init-btn').onclick = () => {
 aiWorker.onmessage = (e) => {
     const { action, payload } = e.data;
     if (action === 'heartbeat') {
-        console.log("AI Worker Heartbeat:", payload.now);
+        // Silenced heartbeat log as requested by user
     }
     else if(action === 'status') {
         document.getElementById('setup-status').innerText = payload.text;
@@ -531,7 +531,7 @@ class LocalRAG {
         const results = await search(this.db, {
             mode: 'vector',
             vector: { value: vector, property: 'embedding' },
-            similarity: 0.4,
+            similarity: 0.25, // Lowered threshold for better recall in educational context
             limit
         });
         return results.hits.map(h => `[Fuente: ${h.document.source}] ${h.document.text}`).join('\n\n');
@@ -821,7 +821,6 @@ document.getElementById('btn-launch-workflow').onclick = async () => {
         }
         if(!d.chunks) continue;
         for(let ch of d.chunks) {
-            const { insert } = await import('https://cdn.jsdelivr.net/npm/@orama/orama@3.1.18/+esm');
             await insert(ragDB.db, { text: ch.text, source: d.name, embedding: ch.vector });
         }
         logUI(`En memoria: ${d.name}`);
