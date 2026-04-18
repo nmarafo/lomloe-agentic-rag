@@ -774,13 +774,54 @@ async function handleFiles(files, type) {
 
 async function extractPdf(file) {
     const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
-    let text = '';
+    let fullText = '';
+    let lastY = -1;
+
     for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(' ') + '\n';
+        
+        // 1. Group items by vertical position (Y) with 3px tolerance
+        const lines = {};
+        content.items.forEach(item => {
+            const y = Math.round(item.transform[5]);
+            let lineKey = Object.keys(lines).find(k => Math.abs(k - y) <= 3);
+            if (!lineKey) {
+                lineKey = y;
+                lines[lineKey] = [];
+            }
+            lines[lineKey].push(item);
+        });
+
+        // 2. Sort lines from top to bottom (Higher Y is usually top in PDF space)
+        const sortedLineKeys = Object.keys(lines).sort((a, b) => b - a);
+        
+        for (const yKey of sortedLineKeys) {
+            const lineItems = lines[yKey].sort((a, b) => a.transform[4] - b.transform[4]);
+            const lineText = lineItems.map(it => it.str).join('').replace(/\s+/g, ' ').trim();
+            if (!lineText) continue;
+
+            // Guess font height from transform[0] or transform[3]
+            const height = Math.abs(lineItems[0].transform[0]);
+            
+            // 3. Paragraph detection: Large gaps suggest new block
+            if (lastY !== -1) {
+                const gap = Math.abs(lastY - yKey);
+                if (gap > height * 2.2) fullText += '\n\n';
+                else fullText += '\n';
+            }
+
+            // 4. Structural markers (Headers)
+            if (height > 18) fullText += '# ' + lineText;
+            else if (height > 14) fullText += '## ' + lineText;
+            else if (height > 12) fullText += '### ' + lineText;
+            else fullText += lineText;
+
+            lastY = yKey;
+        }
+        fullText += '\n\n'; // End of page block
     }
-    return text;
+    return fullText;
 }
 
 window.removeDoc = (type, i) => {
