@@ -561,10 +561,42 @@ document.getElementById('btn-stop-pipeline').onclick = () => {
 };
 
 const DEFAULT_PROMPTS = {
-    f1: "TU TAREA: Analizar los Criterios de Evaluación y diseñar su evaluación...\n\nSigue las instrucciones:\n1. Inventario del Criterio y lista de Descriptores.\n2. Diseño de 1 o 2 Instrumentos.\n3. Generación de Tabla obligatoria.",
-    f2: "TU TAREA: Elabora las rúbricas de cada Instrumento de Evaluación...",
-    f4: "TU TAREA: Distribuye los Contenidos de la materia en 9 Situaciones de Aprendizaje (SAs)...",
-    f5: "TU TAREA: Desarrolla en detalle la Situación de Aprendizaje"
+    f1: `Actúa como un docente experto en la normativa LOMLOE de Canarias. Tienes acceso a los documentos curriculares y las rúbricas proporcionados. 
+
+TU TAREA: Analizar los Criterios de Evaluación del nivel indicado y diseñar su evaluación, asegurando el uso exhaustivo de todos los Descriptores Operativos oficiales. 
+
+DEFINICIÓN TERMINOLÓGICA: 
+'Instrumento de Evaluación': Se refiere exclusivamente al PRODUCTO, EVIDENCIA O TAREA (ej: Guía de Audición, Podcast, Mural). 
+
+INSTRUCCIONES DE PROCESAMIENTO (Sigue este orden): 
+PASO 1: Inventario del Criterio. Identifica el texto completo del Criterio y la lista completa de sus Descriptores Operativos asociados. 
+PASO 2: Diseño de Productos. Diseña 1 o 2 Instrumentos (Productos) que cubran todo el texto del criterio. 
+PASO 3: Distribución OBLIGATORIA de Descriptores. Reparte la totalidad de los descriptores de la lista oficial entre los productos diseñados. 
+
+REGLA DE ORO: No puede quedar ningún descriptor sin asignar. Si un descriptor es difícil de encajar, asígnalo al producto donde tenga más sentido, pero debe aparecer. 
+Ejemplo: Si el criterio tiene 5 descriptores y el Producto 1 usa 3, el Producto 2 debe incluir obligatoriamente los 2 restantes (y puede repetir alguno si es necesario). 
+
+PASO 4: Generación de Tabla. Genera la tabla con las columnas solicitadas: 
+N.º Criterio | Bloque de Descriptores (Específicos) | Parte del Criterio Evaluada (Cita Textual) | Instrumento de Evaluación (Producto Numerado FORMATO: [Criterio].[Secuencia] Ej: 1.1.1. Guía de Audición).
+
+VERIFICACIÓN FINAL: Revisa criterio por criterio. ¿Están todos los descriptores del currículo oficial presentes en la tabla? Si no, corrígelo antes de mostrar el resultado.`,
+
+    f2: `Elabora las rúbricas de cada uno de los Instrumentos de Evaluación de la fuente "Deconstrucción Criterios" teniendo en cuenta las "Pautas elaboración rúbricas" y las "Rúbricas Consejería" para el nivel, indicando la Dimensión, y poniendo en negrita entre otros elementos, los Graduadores dentro de cada rúbrica. 
+
+Añade un ejemplo de cómo sería el producto elaborado para cada grado (INS, SUF...). Asegúrate antes de contestar de que has elaborado las rúbricas de todos los instrumentos de evaluación.`,
+
+    f4: `Distribuye los Contenidos, Criterios de Evaluación y Saberes Básicos en 9 Situaciones de Aprendizaje agrupadas por Evaluaciones (1ª: Septiembre, Octubre, Noviembre, Diciembre; 2ª: Enero, Febrero, Marzo; 3ª: Abril, Mayo Junio) que tengan en cuenta las distintas fechas relevantes del “Calendario Escolar”, los “Objetivos de centro, Planes y Programas”, las “Rúbricas propias” y los Instrumentos de Evaluación que aparecen en ellas. Añade un Título a cada SA generada.`,
+
+    f5: `Desarrolla la Situación de Aprendizaje seleccionada, distribuyendo los contenidos que se van a impartir en 6 sesiones teniendo en cuenta la carga horaria semanal y los principios de David Merrill. 
+
+Indica los elementos curriculares y planes y programas que se trabajarán en esta SA. Cada sesión se distribuirá preferentemente con un mínimo de 2 tareas teniendo en cuenta alguna técnica o dinámica metodológica, señalando para cada una de ellas: 
+1. El título y la duración en minutos de la tarea.
+2. Una Descripción lo más detallada posible con el rol del docente y el del alumnado.
+3. Las distintas rutinas de pensamiento y dinámicas de grupo que se utilizarán explicando en qué consiste.
+4. El tipo de agrupamiento.
+5. Cómo se aplican de manera detallada los principios DUA (representación, acción/expresión, implicación) en la tarea para garantizar la accesibilidad.
+6. Qué Instrumentos de Evaluación/Productos generará el alumnado y qué parte del Criterio de Evaluación se evaluará con cada Producto.
+7. Los recursos y materiales necesarios.`
 };
 
 const views = {
