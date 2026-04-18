@@ -123,8 +123,6 @@ h1 {
 
 .indexing-progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 10px; display: none; }
 .indexing-progress-bar { height: 100%; width: 0%; background: linear-gradient(to right, #7c3aed, var(--accent)); transition: width 0.3s ease; box-shadow: 0 0 10px rgba(187, 139, 255, 0.5); }
-.danger-btn { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
-.danger-btn:hover { background: #ef4444; color: #fff; }
 .stop-btn { background: #ef4444 !important; font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
 .stop-btn:hover { background: #dc2626 !important; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3) !important; }
 .editable-result { width: 100%; height: 350px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.2s; }
@@ -144,12 +142,10 @@ h1 {
             <div class="form-group" style="margin-bottom: 2rem;">
                 <label style="font-size: 1.1rem; color:var(--accent); margin-bottom: 1rem;"><span style="margin-right:8px;">🧠</span>Selecciona el Motor de Inteligencia (LLM)</label>
                 <select id="llm-model-select" class="glass-input" style="padding: 1rem; font-size: 1rem; cursor: pointer;">
-                    <option value="onnx-community/gemma-2-2b-it-f16" selected>Gemma 2 2B - Estabilidad Pro (Recomendado)</option>
-                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 2B - Rápido y eficiente</option>
-                    <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 4B - Máxima calidad (Requiere mucha GPU/RAM)</option>
-                    <option value="Xenova/Qwen2.5-1.5B-it">Qwen 2.5 1.5B - Ideal para PC antiguos</option>
+                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B) - Rápido, ideal RAM baja</option>
+                    <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B) - Más preciso, exige GPU</option>
+                    <option value="Xenova/Qwen1.5-0.5B-Chat">Qwen 1.5 Chat 0.5B - Test súper ligero</option>
                 </select>
-                <p id="gpu-warning" style="color: #ff9800; font-size: 0.8rem; margin-top: 0.5rem; display: none;">⚠️ El modelo 4B requiere al menos 8GB de RAM y una GPU potente. Si falla, elija un modelo 2B.</p>
             </div>
             
             <button id="init-btn" class="primary-btn" style="width: 100%; font-size: 1.2rem; padding: 1rem; margin-bottom: 1.5rem;">Inicializar Entorno WebGPU 🚀</button>
@@ -181,7 +177,6 @@ h1 {
 
             </div>
             <div class="header-actions">
-                <button id="btn-reset-engine" class="danger-btn" style="margin-right: 1rem; display: none;">🔄 Reiniciar Motor AI</button>
                 <button id="nav-projects-btn" class="glass-btn">Mis Proyectos</button>
             </div>
         </header>
@@ -364,83 +359,8 @@ async function deleteProject(id) {
 }
 
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
-let aiWorker = null;
+const aiWorker = new Worker('worker.js?v=22', { type: 'module' });
 let isAiReady = false;
-
-function bootAiEngine() {
-    if(aiWorker) {
-        console.log("Terminando worker anterior...");
-        aiWorker.terminate();
-    }
-    
-    console.log("Iniciando nuevo AI Worker...");
-    aiWorker = new Worker('worker.js?v=23', { type: 'module' });
-    
-    aiWorker.onmessage = (e) => {
-        const { action, payload } = e.data;
-        if (action === 'heartbeat') {
-            // Silenced
-        }
-        else if(action === 'status') {
-            document.getElementById('setup-status').innerText = payload.text;
-        }
-        else if(action === 'progress') {
-            const barId = payload.model === 'embedding' ? 'setup-progress-embed' : 'setup-progress-llm';
-            const lblId = payload.model === 'embedding' ? 'setup-progress-embed-label' : 'setup-progress-llm-label';
-            const fName = payload.file ? payload.file.split('/').pop() : 'pesos';
-            
-            const barEl = document.getElementById(barId);
-            const lblEl = document.getElementById(lblId);
-
-            if (payload.status === 'done') {
-                if(barEl) {
-                    barEl.style.width = '100%';
-                    barEl.style.animation = 'none';
-                    barEl.style.background = '#10b981';
-                }
-                if(lblEl) lblEl.innerText = `100% (${fName})`;
-            } else if (payload.progress !== undefined) {
-                const prog = Math.max(0, Math.min(100, payload.progress));
-                if(barEl) {
-                    barEl.style.width = prog + '%';
-                    barEl.style.animation = 'none';
-                }
-                if(lblEl) lblEl.innerText = `${Math.round(prog)}% (${fName})`;
-            } else if (payload.loaded) {
-                const mb = (payload.loaded / 1024 / 1024).toFixed(1);
-                if(barEl) {
-                    barEl.style.width = '100%';
-                    barEl.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
-                    if(!barEl.style.animation) barEl.style.animation = 'pulse 1s infinite alternate';
-                }
-                if(lblEl) lblEl.innerText = `${mb}MB descargados (${fName})`;
-            }
-        }
-        else if(action === 'ready') {
-            isAiReady = true;
-            document.getElementById('setup-container').classList.add('hidden');
-            document.getElementById('app-container').classList.remove('hidden');
-            document.getElementById('btn-reset-engine').style.display = 'block';
-            renderDashboard(); 
-        }
-        else if(action === 'error') {
-            if(payload.message.includes("Instance reference") || payload.message.includes("WebGPU") || payload.message.includes("OrtRun")) {
-                const ok = confirm("Error fatal de GPU: El navegador ha perdido la conexión con la tarjeta gráfica. ¿Quieres intentar un REINICIO MAESTRO del motor?");
-                if(ok) resetEngine();
-            } else {
-                alert("Error AI: " + payload.message);
-            }
-        }
-    };
-}
-
-document.getElementById('llm-model-select').onchange = (e) => {
-    const isHeavy = e.target.value.includes('4B');
-    document.getElementById('gpu-warning').style.display = isHeavy ? 'block' : 'none';
-};
-
-// Initial Boot
-bootAiEngine();
 
 // UI Initialization Bindings
 window.alert = function(msg) {
@@ -463,6 +383,51 @@ document.getElementById('init-btn').onclick = () => {
     btn.innerText = "Descargando Modelos...";
     document.getElementById('setup-status').innerText = 'Iniciando descarga...';
     aiWorker.postMessage({ action: 'init', payload: { modelId: document.getElementById('llm-model-select').value } });
+};
+
+aiWorker.onmessage = (e) => {
+    const { action, payload } = e.data;
+    if (action === 'heartbeat') {
+        // Silenced heartbeat log as requested by user
+    }
+    else if(action === 'status') {
+        document.getElementById('setup-status').innerText = payload.text;
+    }
+    else if(action === 'progress') {
+        const barId = payload.model === 'embedding' ? 'setup-progress-embed' : 'setup-progress-llm';
+        const lblId = payload.model === 'embedding' ? 'setup-progress-embed-label' : 'setup-progress-llm-label';
+        const fName = payload.file ? payload.file.split('/').pop() : 'pesos';
+        
+        const barEl = document.getElementById(barId);
+        const lblEl = document.getElementById(lblId);
+
+        if (payload.status === 'done') {
+            barEl.style.width = '100%';
+            barEl.style.animation = 'none';
+            barEl.style.background = '#10b981';
+            lblEl.innerText = `100% (${fName})`;
+        } else if (payload.progress !== undefined) {
+            const prog = Math.max(0, Math.min(100, payload.progress));
+            barEl.style.width = prog + '%';
+            barEl.style.animation = 'none';
+            lblEl.innerText = `${Math.round(prog)}% (${fName})`;
+        } else if (payload.loaded) {
+            const mb = (payload.loaded / 1024 / 1024).toFixed(1);
+            barEl.style.width = '100%';
+            barEl.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
+            if(!barEl.style.animation) barEl.style.animation = 'pulse 1s infinite alternate';
+            lblEl.innerText = `${mb}MB descargados (${fName})`;
+        }
+    }
+    else if(action === 'ready') {
+        isAiReady = true;
+        document.getElementById('setup-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        renderDashboard(); // Auto-load projects on entry
+    }
+    else if(action === 'error') {
+        alert("Error crítico AI: " + payload.message);
+    }
 };
 
 class LocalRAG {
@@ -587,29 +552,6 @@ let activeDocs = { formales: [], adicionales: [] };
 let ragDB = null;
 let isPipelineStopped = false;
 
-document.getElementById('btn-reset-engine').onclick = () => {
-    if(confirm("Esto liberará la memoria de la GPU y reiniciará el motor. ¿Continuar?")) {
-        resetEngine();
-    }
-};
-
-async function resetEngine() {
-    isAiReady = false;
-    document.getElementById('btn-reset-engine').style.display = 'none';
-    document.getElementById('app-container').classList.add('hidden');
-    document.getElementById('setup-container').classList.remove('hidden');
-    document.getElementById('setup-status').innerText = 'Destruyendo motor actual...';
-    
-    // Hard Reset: Kill and Respawn
-    bootAiEngine(); 
-    
-    setTimeout(() => {
-        document.getElementById('init-btn').disabled = false;
-        document.getElementById('init-btn').innerText = "Reiniciar Motor Ahora 🚀";
-        document.getElementById('setup-status').innerText = 'Listo para renacer.';
-    }, 800);
-}
-
 // Stop Button Logic
 document.getElementById('btn-stop-pipeline').onclick = () => {
     isPipelineStopped = true;
@@ -637,26 +579,7 @@ Ejemplo: Si el criterio tiene 5 descriptores y el Producto 1 usa 3, el Producto 
 PASO 4: Generación de Tabla. Genera la tabla con las columnas solicitadas: 
 N.º Criterio | Bloque de Descriptores (Específicos) | Parte del Criterio Evaluada (Cita Textual) | Instrumento de Evaluación (Producto Numerado FORMATO: [Criterio].[Secuencia] Ej: 1.1.1. Guía de Audición).
 
-VERIFICACIÓN FINAL: Revisa criterio por criterio. ¿Están todos los descriptores del currículo oficial presentes en la tabla? Si no, corrígelo antes de mostrar el resultado.
-
-### EJEMPLO DE SALIDA DESEADA (Sigue este estilo y rigor):
-Como experto en la normativa **LOMLOE de Canarias**, presento a continuación el diseño de la evaluación para la materia de **Música en 2.º de ESO**.
-
-### PASO 1: Inventario de los Criterios de Evaluación
-* **Criterio 1.1:** «Identificar y describir los elementos rítmicos...»
-  * **Descriptores:** CCL1, CCL2, CCL3, CP3, CCEC1, CCEC2.
-[...otros criterios...]
-
-### PASOS 2, 3 y 4: Tabla de Evaluación
-| N.º Criterio | Bloque de Descriptores | Parte del Criterio | Instrumento (Producto) |
-| :--- | :--- | :--- | :--- |
-| **1.1** | CCL1, CCL2, CCL3, CCEC1 | «Identificar y describir...» | **1.1.1. Guía de Audición Analítica** |
-| **1.1** | CP3, CCEC2 | «...con atención a Canarias...» | **1.1.2. Podcast: Mujeres en la Música** |
-
-### VERIFICACIÓN FINAL
-1. Materia y Nivel: Música 2.º ESO.
-2. Descriptores: Inclusión total (39 descriptores).
-3. Instrumentos: Productos tangibles.`,
+VERIFICACIÓN FINAL: Revisa criterio por criterio. ¿Están todos los descriptores del currículo oficial presentes en la tabla? Si no, corrígelo antes de mostrar el resultado.`,
 
     f2: `Elabora las rúbricas de cada uno de los Instrumentos de Evaluación de la fuente "Deconstrucción Criterios" teniendo en cuenta las "Pautas elaboración rúbricas" y las "Rúbricas Consejería" para el nivel, indicando la Dimensión, y poniendo en negrita entre otros elementos, los Graduadores dentro de cada rúbrica. 
 
@@ -911,30 +834,35 @@ async function extractPdf(file) {
             let lineText = "";
             let lastX = -1;
             let lastWidth = 0;
+            let maxFontHeight = 0;
 
-            for (let it of lineItems) {
-                const x = it.transform[4];
-                const height = Math.abs(it.transform[0]);
-                const str = it.str;
+            for (const item of lineItems) {
+                const x = item.transform[4];
+                const height = Math.abs(item.transform[0]);
+                if (height > maxFontHeight) maxFontHeight = height;
                 
                 if (lastX !== -1) {
                     const gap = x - (lastX + lastWidth);
-                    // Table Column Detection: Significant horizontal gap relative to font size
-                    if (gap > height * 1.5) {
+                    // TABLA: Si el hueco es mayor que 1.8 veces la altura de la fuente, es una columna
+                    if (gap > height * 1.8) {
                         lineText += " | ";
-                    } else if (gap > 2) { 
+                    } 
+                    // ESPACIO: Si el hueco es significativo pero no una columna
+                    else if (gap > height * 0.1 || gap > 1) {
                         lineText += " ";
                     }
                 }
-                lineText += str;
+                
+                lineText += item.str;
                 lastX = x;
-                // pdf.js items usually have a width property, otherwise heuristic
-                lastWidth = it.width || (str.length * height * 0.5); 
+                // PDF.js a veces no da el width, lo estimamos si falta
+                lastWidth = item.width || (item.str.length * (height * 0.6));
             }
+
             lineText = lineText.trim();
             if (!lineText) continue;
 
-            const height = Math.abs(lineItems[0].transform[0]);
+            const height = maxFontHeight;
             
             // 3. Paragraph detection: Large gaps suggest new block
             if (lastY !== -1) {
@@ -1126,8 +1054,7 @@ async function startAgentPipeline() {
     updateStepUI(5);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 5: Desarrollo SA";
-    // STABILITY: Reduced context from 5 to 3 for Fase 5 to prevent WebGPU overflow
-    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 3);
+    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 5);
     currentProject.results.fase5 = "";
     
     let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9
