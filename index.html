@@ -362,8 +362,78 @@ async function deleteProject(id) {
 }
 
 // --- 2. UNIFIED WEBGPU AI ENGINE (Embeds + Generative LLM) ---
-const aiWorker = new Worker('worker.js?v=22', { type: 'module' });
+let aiWorker = null;
 let isAiReady = false;
+
+function bootAiEngine() {
+    if(aiWorker) {
+        console.log("Terminando worker anterior...");
+        aiWorker.terminate();
+    }
+    
+    console.log("Iniciando nuevo AI Worker...");
+    aiWorker = new Worker('worker.js?v=23', { type: 'module' });
+    
+    aiWorker.onmessage = (e) => {
+        const { action, payload } = e.data;
+        if (action === 'heartbeat') {
+            // Silenced
+        }
+        else if(action === 'status') {
+            document.getElementById('setup-status').innerText = payload.text;
+        }
+        else if(action === 'progress') {
+            const barId = payload.model === 'embedding' ? 'setup-progress-embed' : 'setup-progress-llm';
+            const lblId = payload.model === 'embedding' ? 'setup-progress-embed-label' : 'setup-progress-llm-label';
+            const fName = payload.file ? payload.file.split('/').pop() : 'pesos';
+            
+            const barEl = document.getElementById(barId);
+            const lblEl = document.getElementById(lblId);
+
+            if (payload.status === 'done') {
+                if(barEl) {
+                    barEl.style.width = '100%';
+                    barEl.style.animation = 'none';
+                    barEl.style.background = '#10b981';
+                }
+                if(lblEl) lblEl.innerText = `100% (${fName})`;
+            } else if (payload.progress !== undefined) {
+                const prog = Math.max(0, Math.min(100, payload.progress));
+                if(barEl) {
+                    barEl.style.width = prog + '%';
+                    barEl.style.animation = 'none';
+                }
+                if(lblEl) lblEl.innerText = `${Math.round(prog)}% (${fName})`;
+            } else if (payload.loaded) {
+                const mb = (payload.loaded / 1024 / 1024).toFixed(1);
+                if(barEl) {
+                    barEl.style.width = '100%';
+                    barEl.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
+                    if(!barEl.style.animation) barEl.style.animation = 'pulse 1s infinite alternate';
+                }
+                if(lblEl) lblEl.innerText = `${mb}MB descargados (${fName})`;
+            }
+        }
+        else if(action === 'ready') {
+            isAiReady = true;
+            document.getElementById('setup-container').classList.add('hidden');
+            document.getElementById('app-container').classList.remove('hidden');
+            document.getElementById('btn-reset-engine').style.display = 'block';
+            renderDashboard(); 
+        }
+        else if(action === 'error') {
+            if(payload.message.includes("Instance reference") || payload.message.includes("WebGPU") || payload.message.includes("OrtRun")) {
+                const ok = confirm("Error fatal de GPU: El navegador ha perdido la conexión con la tarjeta gráfica. ¿Quieres intentar un REINICIO MAESTRO del motor?");
+                if(ok) resetEngine();
+            } else {
+                alert("Error AI: " + payload.message);
+            }
+        }
+    };
+}
+
+// Initial Boot
+bootAiEngine();
 
 // UI Initialization Bindings
 window.alert = function(msg) {
@@ -386,57 +456,6 @@ document.getElementById('init-btn').onclick = () => {
     btn.innerText = "Descargando Modelos...";
     document.getElementById('setup-status').innerText = 'Iniciando descarga...';
     aiWorker.postMessage({ action: 'init', payload: { modelId: document.getElementById('llm-model-select').value } });
-};
-
-aiWorker.onmessage = (e) => {
-    const { action, payload } = e.data;
-    if (action === 'heartbeat') {
-        // Silenced heartbeat log as requested by user
-    }
-    else if(action === 'status') {
-        document.getElementById('setup-status').innerText = payload.text;
-    }
-    else if(action === 'progress') {
-        const barId = payload.model === 'embedding' ? 'setup-progress-embed' : 'setup-progress-llm';
-        const lblId = payload.model === 'embedding' ? 'setup-progress-embed-label' : 'setup-progress-llm-label';
-        const fName = payload.file ? payload.file.split('/').pop() : 'pesos';
-        
-        const barEl = document.getElementById(barId);
-        const lblEl = document.getElementById(lblId);
-
-        if (payload.status === 'done') {
-            barEl.style.width = '100%';
-            barEl.style.animation = 'none';
-            barEl.style.background = '#10b981';
-            lblEl.innerText = `100% (${fName})`;
-        } else if (payload.progress !== undefined) {
-            const prog = Math.max(0, Math.min(100, payload.progress));
-            barEl.style.width = prog + '%';
-            barEl.style.animation = 'none';
-            lblEl.innerText = `${Math.round(prog)}% (${fName})`;
-        } else if (payload.loaded) {
-            const mb = (payload.loaded / 1024 / 1024).toFixed(1);
-            barEl.style.width = '100%';
-            barEl.style.background = 'linear-gradient(to right, #3b82f6, #8b5cf6)';
-            if(!barEl.style.animation) barEl.style.animation = 'pulse 1s infinite alternate';
-            lblEl.innerText = `${mb}MB descargados (${fName})`;
-        }
-    }
-    else if(action === 'ready') {
-        isAiReady = true;
-        document.getElementById('setup-container').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('btn-reset-engine').style.display = 'block';
-        renderDashboard(); // Auto-load projects on entry
-    }
-    else if(action === 'error') {
-        if(payload.message.includes("Instance reference") || payload.message.includes("WebGPU")) {
-            const ok = confirm("Error fatal de GPU: El navegador ha perdido la conexión con la tarjeta gráfica. ¿Quieres intentar reiniciar el motor de IA?");
-            if(ok) resetEngine();
-        } else {
-            alert("Error AI: " + payload.message);
-        }
-    }
 };
 
 class LocalRAG {
@@ -572,15 +591,16 @@ async function resetEngine() {
     document.getElementById('btn-reset-engine').style.display = 'none';
     document.getElementById('app-container').classList.add('hidden');
     document.getElementById('setup-container').classList.remove('hidden');
-    document.getElementById('setup-status').innerText = 'Liberando recursos...';
+    document.getElementById('setup-status').innerText = 'Destruyendo motor actual...';
     
-    aiWorker.postMessage({ action: 'reset' });
+    // Hard Reset: Kill and Respawn
+    bootAiEngine(); 
     
     setTimeout(() => {
         document.getElementById('init-btn').disabled = false;
         document.getElementById('init-btn').innerText = "Reiniciar Motor Ahora 🚀";
-        document.getElementById('setup-status').innerText = 'Listo para reiniciar.';
-    }, 1000);
+        document.getElementById('setup-status').innerText = 'Listo para renacer.';
+    }, 800);
 }
 
 // Stop Button Logic
