@@ -144,9 +144,10 @@ h1 {
             <div class="form-group" style="margin-bottom: 2rem;">
                 <label style="font-size: 1.1rem; color:var(--accent); margin-bottom: 1rem;"><span style="margin-right:8px;">🧠</span>Selecciona el Motor de Inteligencia (LLM)</label>
                 <select id="llm-model-select" class="glass-input" style="padding: 1rem; font-size: 1rem; cursor: pointer;">
-                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B) - Rápido, ideal RAM baja</option>
-                    <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 E4B (4B) - Más preciso, exige GPU</option>
-                    <option value="Xenova/Qwen1.5-0.5B-Chat">Qwen 1.5 Chat 0.5B - Test súper ligero</option>
+                    <option value="onnx-community/gemma-4-E4B-it-ONNX" selected>Gemma 4 E4B (4B) - Máxima calidad (Recomendado)</option>
+                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B) - Más rápido (Lite)</option>
+                    <option value="onnx-community/gemma-2-2b-it-f16">Gemma 2 2B (2B) - Alta estabilidad</option>
+                    <option value="Xenova/Qwen2.5-1.5B-it">Qwen 2.5 1.5B - Súper ligero y estable</option>
                 </select>
             </div>
             
@@ -1119,7 +1120,8 @@ async function startAgentPipeline() {
     updateStepUI(5);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 5: Desarrollo SA";
-    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 5);
+    // STABILITY: Reduced context from 5 to 3 for Fase 5 to prevent WebGPU overflow
+    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 3);
     currentProject.results.fase5 = "";
     
     let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9

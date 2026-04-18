@@ -89,7 +89,7 @@ self.onmessage = async (e) => {
                      callback_function: checkAbort
                  });
                  
-                 await llmModel(promptTemplate, { max_new_tokens: 1536, streamer, do_sample: false });
+                 await llmModel(promptTemplate, { max_new_tokens: 1024, streamer, do_sample: false });
                  self.postMessage({ action: 'generate_complete' });
             } else {
                  const messages = [ { role: 'system', content: sys }, { role: 'user', content: [{ type: "text", text: prompt }] } ];
@@ -102,7 +102,7 @@ self.onmessage = async (e) => {
                      callback_function: checkAbort
                  });
                  
-                 await llmModel.generate({ ...inputs, max_new_tokens: 2048, do_sample: false, streamer });
+                 await llmModel.generate({ ...inputs, max_new_tokens: 1024, max_length: 4096, do_sample: false, streamer });
                  self.postMessage({ action: 'generate_complete' });
             }
         }
