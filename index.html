@@ -423,6 +423,7 @@ aiWorker.onmessage = (e) => {
         isAiReady = true;
         document.getElementById('setup-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
+        renderDashboard(); // Auto-load projects on entry
     }
     else if(action === 'error') {
         alert("Error crítico AI: " + payload.message);
