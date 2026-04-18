@@ -144,11 +144,12 @@ h1 {
             <div class="form-group" style="margin-bottom: 2rem;">
                 <label style="font-size: 1.1rem; color:var(--accent); margin-bottom: 1rem;"><span style="margin-right:8px;">🧠</span>Selecciona el Motor de Inteligencia (LLM)</label>
                 <select id="llm-model-select" class="glass-input" style="padding: 1rem; font-size: 1rem; cursor: pointer;">
-                    <option value="onnx-community/gemma-4-E4B-it-ONNX" selected>Gemma 4 E4B (4B) - Máxima calidad (Recomendado)</option>
-                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 E2B (2B) - Más rápido (Lite)</option>
-                    <option value="onnx-community/gemma-2-2b-it-f16">Gemma 2 2B (2B) - Alta estabilidad</option>
-                    <option value="Xenova/Qwen2.5-1.5B-it">Qwen 2.5 1.5B - Súper ligero y estable</option>
+                    <option value="onnx-community/gemma-2-2b-it-f16" selected>Gemma 2 2B - Estabilidad Pro (Recomendado)</option>
+                    <option value="onnx-community/gemma-4-E2B-it-ONNX">Gemma 4 2B - Rápido y eficiente</option>
+                    <option value="onnx-community/gemma-4-E4B-it-ONNX">Gemma 4 4B - Máxima calidad (Requiere mucha GPU/RAM)</option>
+                    <option value="Xenova/Qwen2.5-1.5B-it">Qwen 2.5 1.5B - Ideal para PC antiguos</option>
                 </select>
+                <p id="gpu-warning" style="color: #ff9800; font-size: 0.8rem; margin-top: 0.5rem; display: none;">⚠️ El modelo 4B requiere al menos 8GB de RAM y una GPU potente. Si falla, elija un modelo 2B.</p>
             </div>
             
             <button id="init-btn" class="primary-btn" style="width: 100%; font-size: 1.2rem; padding: 1rem; margin-bottom: 1.5rem;">Inicializar Entorno WebGPU 🚀</button>
@@ -432,6 +433,11 @@ function bootAiEngine() {
         }
     };
 }
+
+document.getElementById('llm-model-select').onchange = (e) => {
+    const isHeavy = e.target.value.includes('4B');
+    document.getElementById('gpu-warning').style.display = isHeavy ? 'block' : 'none';
+};
 
 // Initial Boot
 bootAiEngine();
