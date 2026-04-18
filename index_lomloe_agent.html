@@ -795,6 +795,7 @@ function logUI(msg, isSystem=false, isError=false) {
     div.innerText = msg;
     aiLog.appendChild(div);
     aiLog.scrollTop = aiLog.scrollHeight;
+    return div;
 }
 
 document.getElementById('btn-launch-workflow').onclick = async () => {
@@ -874,8 +875,12 @@ async function startAgentPipeline() {
     const contextS1 = await ragDB.queryContext(`Criterios de Evaluación y Descriptores Operativos de ${materia}`, 10);
     const p1 = `Contexto del currículo local:\n${contextS1}\n\n${currentProject.prompts.f1}`;
     
-    logUI(">> Generando Criterios...", true);
-    currentProject.results.fase1 = await promptModel(sysPrompt, p1, (chunk) => { /* Live viewer */ });
+    logUI(">> Analizando y generatriz de Criterios...", true);
+    const logEl1 = logUI("");
+    currentProject.results.fase1 = await promptModel(sysPrompt, p1, (chunk) => {
+        logEl1.innerText += chunk;
+        aiLog.scrollTop = aiLog.scrollHeight;
+    });
     logUI("Fase 1 completada.");
 
     // STEP 2
@@ -885,7 +890,11 @@ async function startAgentPipeline() {
     const p2 = `Contexto Pautas: \n${contextS2}\n\nSalida anterior:\n${currentProject.results.fase1}\n\n${currentProject.prompts.f2}`;
     
     logUI(">> Generando Rúbricas...", true);
-    currentProject.results.fase2 = await promptModel(sysPrompt, p2);
+    const logEl2 = logUI("");
+    currentProject.results.fase2 = await promptModel(sysPrompt, p2, (chunk) => {
+        logEl2.innerText += chunk;
+        aiLog.scrollTop = aiLog.scrollHeight;
+    });
     logUI("Fase 2 completada.");
 
     // SKIP STEP 3 GENERATION...
@@ -901,7 +910,11 @@ async function startAgentPipeline() {
     const p4 = `Contexto Centro:\n${contextS4}\nSalida 1:\n${currentProject.results.fase1}\nSalida 2:\n${currentProject.results.fase2}\n\n${currentProject.prompts.f4}`;
     
     logUI(">> Secuenciando Programación...", true);
-    currentProject.results.fase4 = await promptModel(sysPrompt, p4);
+    const logEl4 = logUI("");
+    currentProject.results.fase4 = await promptModel(sysPrompt, p4, (chunk) => {
+        logEl4.innerText += chunk;
+        aiLog.scrollTop = aiLog.scrollHeight;
+    });
     
     // STEP 5
     updateStepUI(5);
@@ -911,9 +924,14 @@ async function startAgentPipeline() {
     
     let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9
     for(let sa=1; sa<=maxSAs; sa++) {
-        logUI(`>> Desarrollando SA ${sa}...`, true);
+        logUI(`>> Analizando y desarrollando SA ${sa}...`, true);
         const p5 = `Contexto DUA y Métodos:\n${contextS5}\nSecuenciación general:\n${currentProject.results.fase4}\n\n${currentProject.prompts.f5} nº ${sa}...`;
-        currentProject.results.fase5 += `\n\n## SA ${sa}\n` + await promptModel(sysPrompt, p5);
+        const logEl5 = logUI("");
+        const resSA = await promptModel(sysPrompt, p5, (chunk) => {
+            logEl5.innerText += chunk;
+            aiLog.scrollTop = aiLog.scrollHeight;
+        });
+        currentProject.results.fase5 += `\n\n## SA ${sa}\n` + resSA;
     }
     
     // Done
