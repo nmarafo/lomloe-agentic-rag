@@ -123,6 +123,12 @@ h1 {
 
 .indexing-progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 10px; display: none; }
 .indexing-progress-bar { height: 100%; width: 0%; background: linear-gradient(to right, #7c3aed, var(--accent)); transition: width 0.3s ease; box-shadow: 0 0 10px rgba(187, 139, 255, 0.5); }
+.stop-btn { background: #ef4444 !important; font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
+.stop-btn:hover { background: #dc2626 !important; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3) !important; }
+.editable-result { width: 100%; height: 350px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.2s; }
+.editable-result:focus { border-color: var(--accent); }
+.copy-btn { position: absolute; right: 1rem; top: 1rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 6px; color: #fff; cursor: pointer; z-index: 10; cursor: pointer; }
+.copy-btn:hover { background: var(--accent); }
 @keyframes pulse { 0% { opacity: 0.6; } 100% { opacity: 1; filter: brightness(1.2); } }
 </style>
 </head>
@@ -279,6 +285,7 @@ h1 {
                     <div class="card glass execution-canvas">
                         <div class="canvas-header" style="position: relative;">
                             <h3 id="current-task-title">Esperando...</h3>
+                            <button id="btn-stop-pipeline" class="primary-btn stop-btn" style="position: absolute; right: 1.5rem; top: 0.8rem; display: none;">🛑 Detener</button>
                             <div class="indexing-progress-container" id="indexing-progress-container">
                                 <div class="indexing-progress-bar" id="indexing-progress-bar"></div>
                             </div>
@@ -542,7 +549,15 @@ class LocalRAG {
 let currentProject = null;
 let activeDocs = { formales: [], adicionales: [] };
 let ragDB = null;
-let llmWorker = null;
+let isPipelineStopped = false;
+
+// Stop Button Logic
+document.getElementById('btn-stop-pipeline').onclick = () => {
+    isPipelineStopped = true;
+    aiWorker.postMessage({ action: 'abort' });
+    logUI("Deteniendo procesos...", false, true);
+    document.getElementById('btn-stop-pipeline').style.display = 'none';
+};
 
 const DEFAULT_PROMPTS = {
     f1: "TU TAREA: Analizar los Criterios de Evaluación y diseñar su evaluación...\n\nSigue las instrucciones:\n1. Inventario del Criterio y lista de Descriptores.\n2. Diseño de 1 o 2 Instrumentos.\n3. Generación de Tabla obligatoria.",
@@ -829,7 +844,17 @@ document.getElementById('btn-launch-workflow').onclick = async () => {
     
     document.getElementById('step-0').className = 'step-item done';
     logUI("AI Engine pre-cargado globalmente. Comenzando pipeline...", true);
-    await startAgentPipeline();
+    
+    isPipelineStopped = false;
+    document.getElementById('btn-stop-pipeline').style.display = 'block';
+    
+    try {
+        await startAgentPipeline();
+    } catch (e) {
+        logUI("Pipeline interrumpido: " + e.message, false, true);
+    } finally {
+        document.getElementById('btn-stop-pipeline').style.display = 'none';
+    }
 };
 
 async function promptModel(sys, promptTxt, streamCb) {
@@ -847,10 +872,12 @@ async function promptModel(sys, promptTxt, streamCb) {
                 resolve(fullOutput);
             }
             if(action === 'error') {
+                aiWorker.removeEventListener('message', handler);
                 logUI("GError: " + payload.message, false, true);
                 resolve("");
             }
         };
+        if(isPipelineStopped) return resolve("");
         aiWorker.addEventListener('message', handler);
         aiWorker.postMessage({ action: 'generate', payload: { sys, prompt: promptTxt } });
     });
@@ -869,8 +896,10 @@ async function startAgentPipeline() {
     const materia = currentProject.materiaNivel;
     const sysPrompt = "Actúa como un docente experto en la normativa LOMLOE de Canarias. Contesta SIEMPRE en español con gran detalle y estructura en formato Markdown.";
     
+    const checkStatus = () => { if(isPipelineStopped) throw new Error("Parada solicitada"); };
     // STEP 1
     updateStepUI(1);
+    checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 1: Deconstrucción Criterios";
     const contextS1 = await ragDB.queryContext(`Criterios de Evaluación y Descriptores Operativos de ${materia}`, 10);
     const p1 = `Contexto del currículo local:\n${contextS1}\n\n${currentProject.prompts.f1}`;
@@ -885,6 +914,7 @@ async function startAgentPipeline() {
 
     // STEP 2
     updateStepUI(2);
+    checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 2: Elaboración Rúbricas";
     const contextS2 = await ragDB.queryContext(`Pautas elaboración rúbricas y graduadores`, 5);
     const p2 = `Contexto Pautas: \n${contextS2}\n\nSalida anterior:\n${currentProject.results.fase1}\n\n${currentProject.prompts.f2}`;
@@ -899,12 +929,14 @@ async function startAgentPipeline() {
 
     // SKIP STEP 3 GENERATION...
     updateStepUI(3);
+    checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 3: Ecosistema NotebookLM";
     logUI(">> Generando Ecosistema Opcional...", true);
     currentProject.results.fase3 = "Ecosistema generado internamente.";
     
     // STEP 4
     updateStepUI(4);
+    checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 4: Secuenciación SAs";
     const contextS4 = await ragDB.queryContext(`Objetivos de centro, Planes y Programas`, 5);
     const p4 = `Contexto Centro:\n${contextS4}\nSalida 1:\n${currentProject.results.fase1}\nSalida 2:\n${currentProject.results.fase2}\n\n${currentProject.prompts.f4}`;
@@ -918,12 +950,14 @@ async function startAgentPipeline() {
     
     // STEP 5
     updateStepUI(5);
+    checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 5: Desarrollo SA";
     const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 5);
     currentProject.results.fase5 = "";
     
     let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9
     for(let sa=1; sa<=maxSAs; sa++) {
+        checkStatus();
         logUI(`>> Analizando y desarrollando SA ${sa}...`, true);
         const p5 = `Contexto DUA y Métodos:\n${contextS5}\nSecuenciación general:\n${currentProject.results.fase4}\n\n${currentProject.prompts.f5} nº ${sa}...`;
         const logEl5 = logUI("");
@@ -948,6 +982,7 @@ function renderResults() {
     rc.style.display = 'block';
     tabs.style.display = 'flex';
     tabs.innerHTML = '';
+    rc.style.position = 'relative';
     
     const kData = [
         {k: 'fase1', l: 'Criterios'},
@@ -956,6 +991,32 @@ function renderResults() {
         {k: 'fase5', l: 'Desarrollo SA'}
     ];
     
+    const showTab = (k) => {
+        rc.innerHTML = '';
+        
+        // Copy Button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'copy-btn';
+        copyBtn.innerText = '📋 Copiar';
+        copyBtn.onclick = () => {
+            navigator.clipboard.writeText(currentProject.results[k] || '');
+            copyBtn.innerText = '✅ Copiado';
+            setTimeout(() => copyBtn.innerText = '📋 Copiar', 2000);
+        };
+        
+        // Editable Textarea
+        const area = document.createElement('textarea');
+        area.className = 'editable-result';
+        area.value = currentProject.results[k] || '';
+        area.oninput = () => {
+            currentProject.results[k] = area.value;
+            saveProject(currentProject); // Auto-save on edit
+        };
+        
+        rc.appendChild(copyBtn);
+        rc.appendChild(area);
+    };
+
     kData.forEach((item, idx) => {
         const btn = document.createElement('button');
         btn.className = `tab-btn ${idx===0?'active':''}`;
@@ -963,11 +1024,12 @@ function renderResults() {
         btn.onclick = () => {
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            rc.innerHTML = window.marked.parse(currentProject.results[item.k] || '*Vacio*');
+            showTab(item.k);
         };
         tabs.appendChild(btn);
     });
-    rc.innerHTML = window.marked.parse(currentProject.results.fase1 || '*Vacio*');
+    
+    showTab('fase1');
 }
 
 

@@ -3,6 +3,7 @@ import { pipeline, env, AutoProcessor, AutoModelForCausalLM, TextStreamer } from
 let embeddingPipeline = null;
 let llmProcessor = null;
 let llmModel = null;
+let isAborted = false;
 
 // Heartbeat para confirmar vida
 setInterval(() => {
@@ -12,6 +13,11 @@ setInterval(() => {
 self.onmessage = async (e) => {
     const { action, payload, id } = e.data;
     try {
+        if (action === 'abort') {
+            isAborted = true;
+            return;
+        }
+
         if (action === 'init') {
             const { modelId } = payload;
             self.postMessage({ action: 'status', payload: { text: 'Configurando Motor WebGPU...' } });
@@ -58,7 +64,13 @@ self.onmessage = async (e) => {
             
         } else if (action === 'generate') {
             const { sys, prompt } = payload;
+            isAborted = false; // Reset on start
             
+            const checkAbort = (text) => {
+                if(isAborted) throw new Error("Generación detenida por el usuario.");
+                self.postMessage({ action: 'chunk', payload: { text } });
+            };
+
             if(llmProcessor && llmProcessor.isFallback) {
                  const messages = [ { role: "system", content: sys }, { role: "user", content: prompt } ];
                  const promptTemplate = llmModel.tokenizer.apply_chat_template(messages, { tokenize: false, add_generation_prompt: true });
@@ -66,7 +78,7 @@ self.onmessage = async (e) => {
                  const streamer = new TextStreamer(llmModel.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
-                     callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
+                     callback_function: checkAbort
                  });
                  
                  await llmModel(promptTemplate, { max_new_tokens: 1536, streamer, do_sample: false });
@@ -79,7 +91,7 @@ self.onmessage = async (e) => {
                  const streamer = new TextStreamer(llmProcessor.tokenizer, {
                      skip_prompt: true,
                      skip_special_tokens: true,
-                     callback_function: (text) => self.postMessage({ action: 'chunk', payload: { text } })
+                     callback_function: checkAbort
                  });
                  
                  await llmModel.generate({ ...inputs, max_new_tokens: 2048, do_sample: false, streamer });
@@ -87,6 +99,9 @@ self.onmessage = async (e) => {
             }
         }
     } catch (err) {
+        if(err.message === "Generación detenida por el usuario.") {
+            self.postMessage({ action: 'status', payload: { text: "Operación cancelada." } });
+        }
         self.postMessage({ action: 'error', payload: { message: (err.message || String(err)) } });
     }
 };
