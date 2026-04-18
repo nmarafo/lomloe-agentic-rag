@@ -830,10 +830,33 @@ async function extractPdf(file) {
         
         for (const yKey of sortedLineKeys) {
             const lineItems = lines[yKey].sort((a, b) => a.transform[4] - b.transform[4]);
-            const lineText = lineItems.map(it => it.str).join('').replace(/\s+/g, ' ').trim();
+            
+            let lineText = "";
+            let lastX = -1;
+            let lastWidth = 0;
+
+            for (let it of lineItems) {
+                const x = it.transform[4];
+                const height = Math.abs(it.transform[0]);
+                const str = it.str;
+                
+                if (lastX !== -1) {
+                    const gap = x - (lastX + lastWidth);
+                    // Table Column Detection: Significant horizontal gap relative to font size
+                    if (gap > height * 1.5) {
+                        lineText += " | ";
+                    } else if (gap > 2) { 
+                        lineText += " ";
+                    }
+                }
+                lineText += str;
+                lastX = x;
+                // pdf.js items usually have a width property, otherwise heuristic
+                lastWidth = it.width || (str.length * height * 0.5); 
+            }
+            lineText = lineText.trim();
             if (!lineText) continue;
 
-            // Guess font height from transform[0] or transform[3]
             const height = Math.abs(lineItems[0].transform[0]);
             
             // 3. Paragraph detection: Large gaps suggest new block
