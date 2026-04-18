@@ -18,6 +18,14 @@ self.onmessage = async (e) => {
             return;
         }
 
+        if (action === 'reset') {
+            embeddingPipeline = null;
+            llmProcessor = null;
+            llmModel = null;
+            self.postMessage({ action: 'status', payload: { text: 'Motor liberado. Listo para reinicio.' } });
+            return;
+        }
+
         if (action === 'init') {
             const { modelId } = payload;
             self.postMessage({ action: 'status', payload: { text: 'Configurando Motor WebGPU...' } });

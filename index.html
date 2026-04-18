@@ -123,6 +123,8 @@ h1 {
 
 .indexing-progress-container { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-top: 10px; display: none; }
 .indexing-progress-bar { height: 100%; width: 0%; background: linear-gradient(to right, #7c3aed, var(--accent)); transition: width 0.3s ease; box-shadow: 0 0 10px rgba(187, 139, 255, 0.5); }
+.danger-btn { background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #ef4444; font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+.danger-btn:hover { background: #ef4444; color: #fff; }
 .stop-btn { background: #ef4444 !important; font-size: 0.8rem !important; padding: 0.4rem 0.8rem !important; }
 .stop-btn:hover { background: #dc2626 !important; box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3) !important; }
 .editable-result { width: 100%; height: 350px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--glass-border); border-radius: 8px; padding: 1rem; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; resize: vertical; outline: none; transition: border-color 0.2s; }
@@ -177,6 +179,7 @@ h1 {
 
             </div>
             <div class="header-actions">
+                <button id="btn-reset-engine" class="danger-btn" style="margin-right: 1rem; display: none;">🔄 Reiniciar Motor AI</button>
                 <button id="nav-projects-btn" class="glass-btn">Mis Proyectos</button>
             </div>
         </header>
@@ -423,10 +426,16 @@ aiWorker.onmessage = (e) => {
         isAiReady = true;
         document.getElementById('setup-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('btn-reset-engine').style.display = 'block';
         renderDashboard(); // Auto-load projects on entry
     }
     else if(action === 'error') {
-        alert("Error crítico AI: " + payload.message);
+        if(payload.message.includes("Instance reference") || payload.message.includes("WebGPU")) {
+            const ok = confirm("Error fatal de GPU: El navegador ha perdido la conexión con la tarjeta gráfica. ¿Quieres intentar reiniciar el motor de IA?");
+            if(ok) resetEngine();
+        } else {
+            alert("Error AI: " + payload.message);
+        }
     }
 };
 
@@ -551,6 +560,28 @@ let currentProject = null;
 let activeDocs = { formales: [], adicionales: [] };
 let ragDB = null;
 let isPipelineStopped = false;
+
+document.getElementById('btn-reset-engine').onclick = () => {
+    if(confirm("Esto liberará la memoria de la GPU y reiniciará el motor. ¿Continuar?")) {
+        resetEngine();
+    }
+};
+
+async function resetEngine() {
+    isAiReady = false;
+    document.getElementById('btn-reset-engine').style.display = 'none';
+    document.getElementById('app-container').classList.add('hidden');
+    document.getElementById('setup-container').classList.remove('hidden');
+    document.getElementById('setup-status').innerText = 'Liberando recursos...';
+    
+    aiWorker.postMessage({ action: 'reset' });
+    
+    setTimeout(() => {
+        document.getElementById('init-btn').disabled = false;
+        document.getElementById('init-btn').innerText = "Reiniciar Motor Ahora 🚀";
+        document.getElementById('setup-status').innerText = 'Listo para reiniciar.';
+    }, 1000);
+}
 
 // Stop Button Logic
 document.getElementById('btn-stop-pipeline').onclick = () => {
