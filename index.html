@@ -1036,7 +1036,7 @@ async function startAgentPipeline() {
     updateStepUI(1);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 1: Deconstrucción Criterios";
-    const contextS1 = await ragDB.queryContext(`Criterios de Evaluación y Descriptores Operativos de ${materia}`, 10);
+    const contextS1 = await ragDB.queryContext(`Criterios de Evaluación y Descriptores Operativos de ${materia}`, 4);
     const p1 = `Contexto del currículo local:\n${contextS1}\n\n${currentProject.prompts.f1}`;
     
     logUI(">> Analizando y generatriz de Criterios...", true);
@@ -1051,7 +1051,7 @@ async function startAgentPipeline() {
     updateStepUI(2);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 2: Elaboración Rúbricas";
-    const contextS2 = await ragDB.queryContext(`Pautas elaboración rúbricas y graduadores`, 5);
+    const contextS2 = await ragDB.queryContext(`Pautas elaboración rúbricas y graduadores`, 3);
     const p2 = `Contexto Pautas: \n${contextS2}\n\nSalida anterior:\n${currentProject.results.fase1}\n\n${currentProject.prompts.f2}`;
     
     logUI(">> Generando Rúbricas...", true);
@@ -1073,7 +1073,7 @@ async function startAgentPipeline() {
     updateStepUI(4);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 4: Secuenciación SAs";
-    const contextS4 = await ragDB.queryContext(`Objetivos de centro, Planes y Programas`, 5);
+    const contextS4 = await ragDB.queryContext(`Objetivos de centro, Planes y Programas`, 3);
     const p4 = `Contexto Centro:\n${contextS4}\nSalida 1:\n${currentProject.results.fase1}\nSalida 2:\n${currentProject.results.fase2}\n\n${currentProject.prompts.f4}`;
     
     logUI(">> Secuenciando Programación...", true);
@@ -1087,7 +1087,7 @@ async function startAgentPipeline() {
     updateStepUI(5);
     checkStatus();
     document.getElementById('current-task-title').innerText = "Fase 5: Desarrollo SA";
-    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 5);
+    const contextS5 = await ragDB.queryContext(`Aplicación principios DUA, roles y metodologías activas`, 3);
     currentProject.results.fase5 = "";
     
     let maxSAs = 2; // For testing we restrict to 2 SAs, but you can change to 9
