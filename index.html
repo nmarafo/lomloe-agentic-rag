@@ -488,67 +488,55 @@ class LocalRAG {
     }
 
     async precalculateChunks(text, progressCb = null) {
-        // Intelligent Legal / Structural Chunker (ported from local-gemma4-rag)
-        const chunks = [];
-        let currentTitulo = 'Contexto General';
-        let currentCapitulo = '';
-        let currentSeccion = '';
-        let currentArticulo = '';
-        let rawBuffer = '';
-
-        const pushBuffer = () => {
-            if (rawBuffer.trim().length > 40) {
-                const size = 1000;
-                const overlap = 200;
-                let subChunks = [];
+        // Intelligent Semantic Chunker for Markdown / Educational Docs
+        let chunks = [];
+        const sizeLimit = 1200;
+        
+        let h1 = '', h2 = '', h3 = '';
+        const paragraphs = text.split(/\n\s*\n/);
+        
+        let currentChunk = '';
+        
+        const pushChunk = () => {
+            if(currentChunk.trim().length > 10) {
+                let contextArr = [];
+                if(h1) contextArr.push(h1);
+                if(h2) contextArr.push(h2);
+                if(h3) contextArr.push(h3);
                 
-                if (rawBuffer.trim().length <= size) {
-                    subChunks.push(rawBuffer.trim());
-                } else {
-                    for (let i = 0; i < rawBuffer.length; i += size - overlap) {
-                        subChunks.push(rawBuffer.slice(i, i + size).trim());
-                        if (i + size >= rawBuffer.length) break;
-                    }
-                }
-                
-                subChunks.forEach(sub => {
-                    let contextArr = [];
-                    if (currentTitulo) contextArr.push(currentTitulo);
-                    if (currentCapitulo) contextArr.push(currentCapitulo);
-                    if (currentSeccion) contextArr.push(currentSeccion);
-                    if (currentArticulo) contextArr.push(currentArticulo);
-                    const header = `[ESTRUCTURA: ${contextArr.join(' | ')}]`;
-                    chunks.push(`${header}\n${sub}`);
-                });
+                const header = contextArr.length > 0 ? `[Contexto: ${contextArr.join(' > ')}]\n` : '';
+                chunks.push(header + currentChunk.trim());
             }
-            rawBuffer = '';
+            currentChunk = '';
         };
 
-        const lines = text.split('\n');
-        for (let line of lines) {
-            line = line.trim();
-            if (!line) continue;
-            
-            if (line.match(/^(?:TÍTULO|Título)\s+[A-ZIVX]+/)) {
-                pushBuffer();
-                currentTitulo = line;
-                currentCapitulo = ''; currentSeccion = ''; currentArticulo = '';
-            } else if (line.match(/^(?:CAPÍTULO|Capítulo)\s+[A-ZIVX]+/)) {
-                pushBuffer();
-                currentCapitulo = line;
-                currentSeccion = ''; currentArticulo = '';
-            } else if (line.match(/^(?:Sección|SECCIÓN)\s+\d+/)) {
-                pushBuffer();
-                currentSeccion = line;
-                currentArticulo = '';
-            } else if (line.match(/^(?:Artículo|Art\.|Articulo)\s+\d+/i) || line.match(/^(?:Disposición|DISPOSICIÓN)/i)) {
-                pushBuffer();
-                currentArticulo = line;
-            }
+        for (let p of paragraphs) {
+            p = p.trim();
+            if (!p) continue;
 
-            rawBuffer += line + '\n';
+            if (p.startsWith('# ')) { h1 = p.replace('# ', ''); h2 = ''; h3 = ''; }
+            else if (p.startsWith('## ')) { h2 = p.replace('## ', ''); h3 = ''; }
+            else if (p.startsWith('### ')) { h3 = p.replace('### ', ''); }
+            
+            if (p.length > sizeLimit) {
+                if (currentChunk.trim().length > 0) pushChunk();
+                
+                const lines = p.split('\n');
+                for (let line of lines) {
+                    if (currentChunk.length + line.length > sizeLimit && currentChunk.length > 0) {
+                        pushChunk();
+                    }
+                    currentChunk += line + '\n';
+                }
+                pushChunk(); 
+            } else {
+                if (currentChunk.length + p.length > sizeLimit) {
+                    pushChunk();
+                }
+                currentChunk += p + '\n\n';
+            }
         }
-        pushBuffer();
+        pushChunk();
 
         const dataChunks = [];
         for (let i = 0; i < chunks.length; i++) {
